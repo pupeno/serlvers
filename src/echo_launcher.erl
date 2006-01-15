@@ -22,6 +22,7 @@ acceptor(LSocket) ->
     inet:setopts(Socket, [{active, once}]),
     {ok, Pid} = echo:start(), % A good idea might be adding this to a supervisor, although they are all temporary.
     ok = gen_tcp:controlling_process(Socket, Pid),
+    gen_server:cast(Pid, {started, Socket}),
     acceptor(LSocket).
 
 %% Callbacks.
