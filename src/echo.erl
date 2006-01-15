@@ -25,7 +25,7 @@ stop(Process) ->
 %% Callbacks.
 init(_Args) ->
     io:fwrite("~w:init(~w)~n", [?MODULE, _Args]),
-    {ok, noState}.
+    {ok, []}.
     
 echo(Data, State) ->
     io:fwrite("~w:echo(~w)~n", [?MODULE, Data]),
