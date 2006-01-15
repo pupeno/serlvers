@@ -1,15 +1,19 @@
 -module(echo_launcher).
 -behaviour(gen_server).
--export([start_link/1]).
+-export([start_link/1, start_link/2, stop/1]).
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([acceptor/1]).
 
-start_link({tcp, Port}) ->
-    io:fwrite("~w:start_link(~w)~n", [?MODULE, {tcp, Port}]),
-    gen_server:start_link(?MODULE, {tcp, Port}, []);
-start_link({udp, Port}) ->
-    io:fwrite("~w:start_link(~w)~n", [?MODULE, {udp, Port}]),
-    gen_server:start_link(?MODULE, {udp, Port}, []).
+start_link(TransportAndPort) ->
+    io:fwrite("~w:start_link(~w)~n", [?MODULE, TransportAndPort]),
+    gen_server:start_link(?MODULE, TransportAndPort, []).
+
+start_link(SupName, TransportAndPort) ->
+    io:fwrite("~w:start_link(~w, ~w)~n", [?MODULE, SupName, TransportAndPort]),
+    gen_server:start_link(SupName, ?MODULE, TransportAndPort, []).
+
+stop(Process) ->
+    gen_server:cast(Process, stop).
 
 %% The follwing function is in charge of accept new TCP connections.
 acceptor(LSocket) ->
@@ -30,15 +34,17 @@ init({tcp, Port}) ->
 init({udp, Port}) ->
     io:fwrite("~w:init(~w)~n", [?MODULE, {udp, Port}]),
     process_flag(trap_exit, true),
-    {ok, Socket} = gen_udp:open(Port, [{active, once}]), % Open the udp socket.
-    {ok, Pid} = echo:start_link(),                       % One worker to take care of UDP.
-    gen_udp:controlling_process(Socket, Pid),            % Give the UDP port to the worker.
+    {ok, Socket} = gen_udp:open(Port, [{active, once}]),   % Open the udp socket.
+    {ok, Pid} = echo:start_link({local, echo_udp_worker}), % One worker to take care of UDP.
+    gen_udp:controlling_process(Socket, Pid),              % Give the UDP port to the worker.
     {ok, {udp, Socket}}.
   
 handle_call(_Request, _From, State) ->
     io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
+handle_cast(stop, State) ->
+    {stop, normal, State};
 handle_cast(_Request, State) ->
     io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.

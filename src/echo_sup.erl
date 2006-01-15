@@ -10,7 +10,9 @@ start_link(UDPPort, TCPPort) ->
 init({UDPPort, TCPPort}) ->
     io:fwrite("~w:init(~w)~n", [?MODULE, {UDPPort, TCPPort}]),
     {ok, {{one_for_one, 1, 5},
-          [{echo_tcp, {echo_launcher, start_link, [{tcp, TCPPort}]},
+          [{echo_tcp, 
+	    {echo_launcher, start_link, [{local, echo_tcp_launcher}, {tcp, TCPPort}]},
 	    permanent, 1000, worker, [echo_launcher]},
-	   {echo_udp, {echo_launcher, start_link, [{udp, UDPPort}]},
+	   {echo_udp, 
+	    {echo_launcher, start_link, [{local, echo_udp_launcher}, {udp, UDPPort}]},
 	    permanent, 1000, worker, [echo_launcher]}]}}.
