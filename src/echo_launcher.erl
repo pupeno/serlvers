@@ -9,26 +9,22 @@ start_link({tcp, Port}) ->
 start_link({udp, Port}) ->
     gen_server:start_link(?MODULE, {udp, Port}, []).
 
-%stop() ->
-%    gen_server:cast(?MODULE, stop).
-
 %% The follwing function is in charge of accept new TCP connections.
 acceptor(LSocket) ->
-    io:fwrite("~w:acceptor(~w)~n", [?MODULE, LSocket]),
     {ok, Socket} = gen_tcp:accept(LSocket),
-    io:fwrite("Socket=~w~n", [Socket]),
     inet:setopts(Socket, [{active, once}]),
     {ok, Pid} = echo:start(), % A good idea might be adding this to a supervisor, although they are all temporary.
-    io:fwrite("Pid=~w~n", [Pid]),
     ok = gen_tcp:controlling_process(Socket, Pid),
     acceptor(LSocket).
 
 %% Callbacks.
 init({tcp, Port}) ->
+    process_flag(trap_exit, true),
     {ok, LSocket} = gen_tcp:listen(Port, [{active, once}]), % Open the tcp port.
     spawn_link(?MODULE, acceptor, [LSocket]),               % Launch the acceptor.
     {ok, {tcp, LSocket}};
 init({udp, Port}) ->
+    process_flag(trap_exit, true),
     {ok, Socket} = gen_udp:open(Port, [{active, once}]), % Open the udp socket.
     {ok, Pid} = echo:start_link({local, udp_echo}),      % One worker to take care of UDP.
     gen_udp:controlling_process(Socket, Pid),            % Give the UDP port to the worker.
