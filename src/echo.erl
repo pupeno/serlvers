@@ -40,9 +40,7 @@ handle_info({tcp, Socket, Packet}, State) ->
     Reply = echo(Packet),                        % Generate the reply.
     gen_tcp:send(Socket, Reply),                 % Send the reply.
     ok = inet:setopts(Socket, [{active, once}]), % Enable receiving of packages, get the next one.
-    {noreply, State};
-handle_info({tcp_closed, _Socket}, State) ->
-    {stop, normal, State};    
+    {noreply, State};    
 handle_info(_Info, State) ->
     {noreply, State}.
     

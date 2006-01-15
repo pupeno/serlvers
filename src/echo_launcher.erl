@@ -33,8 +33,6 @@ init({udp, Port}) ->
 handle_call(_Request, _From, State) ->
     {noreply, State}.
 
-handle_cast(stop, State) ->
-    {stop, normal, State};
 handle_cast(_Request, State) ->
     {noreply, State}.
 
