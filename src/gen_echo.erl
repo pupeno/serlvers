@@ -41,20 +41,20 @@ handle_call(_Request, _From, State) ->
     {noreply, State}.
 
 handle_cast(stop, State) ->
+    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
 handle_cast(_Request, State) ->
     io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
-% Handle UDP packages.
-handle_info({udp, Socket, IP, InPortNo, Packet}, {Module, ModState}) ->
+handle_info({udp, Socket, IP, InPortNo, Packet}, {Module, ModState}) -> % Handle UDP packages.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, Packet} , {Module, ModState}]),
     {Reply, NewModState} = Module:echo(Packet, ModState), % Generate the reply.
     gen_udp:send(Socket, IP, InPortNo, Reply),            % Send the reply.
     ok = inet:setopts(Socket, [{active, once}]),          % Enable receiving of packages, get the next one.
     {noreply, {Module, NewModState}};
 % Handle TCP packages.
-handle_info({tcp, Socket, Packet}, {Module, ModState}) ->
+handle_info({tcp, Socket, Packet}, {Module, ModState}) -> % Handle TCP packages.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {tcp, Socket, Packet}, {Module, ModState}]),
     {Reply, NewModState} = Module:echo(Packet, ModState), % Generate the reply.
     gen_tcp:send(Socket, Reply),                          % Send the reply.
@@ -72,4 +72,3 @@ terminate(Reason, {Module, ModState}) ->
 code_change(_OldVsn, State, _Extra) ->
     io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
-    
