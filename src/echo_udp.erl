@@ -13,7 +13,7 @@ stop() ->
 init(Port) ->
     {ok, Socket} = gen_udp:open(Port, [{active, once}]), % Open the udp socket.
     {ok, _} = echo:start_link({local, udp_echo}),   % One worker to take care of UDP.
-    {ok, {Socket}}.
+    {ok, Socket}.
     
 handle_call(_Request, _From, State) ->
     {noreply, State}.
@@ -24,16 +24,16 @@ handle_cast(_Request, State) ->
     {noreply, State}.
 
 % Receive an UDP message.
-handle_info({udp, Socket, IP, InPortNo, Packet}, {Socket}) -> % Socket and Socket are and must be the same, isn't Erlang awesome ?
+handle_info({udp, Socket, IP, InPortNo, Packet}, Socket) -> % Socket and Socket are and must be the same, isn't Erlang awesome ?
     Reply = echo:echo(udp_echo, Packet),         % Generate the reply.
     gen_udp:send(Socket, IP, InPortNo, Reply),   % Send the reply.
     ok = inet:setopts(Socket, [{active, once}]), % Enable receiving of packages, get the next one.
-    {noreply, {Socket}};
+    {noreply, Socket};
 
 handle_info(_Info, State) ->
     {noreply, State}.
     
-terminate(_Reason, {Socket}) ->
+terminate(_Reason, Socket) ->
     gen_udp:close(Socket), % Close the socket, we are done.
     ok.
 
