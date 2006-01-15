@@ -1,11 +1,15 @@
 -module(echo_sup).
 -behaviour(supervisor).
--export([start_link/2]).
+-export([start_link/2, which_children/0]).
 -export([init/1]).
 
 start_link(UDPPort, TCPPort) ->
     io:fwrite("~w:start_link(~w, ~w)~n", [?MODULE, UDPPort, TCPPort]),
     supervisor:start_link({local, ?MODULE}, ?MODULE, {UDPPort, TCPPort}).
+
+which_children() ->
+    io:fwrite("~w:which_children()~n", [?MODULE]),
+    supervisor:which_children(?MODULE).
 
 init({UDPPort, TCPPort}) ->
     io:fwrite("~w:init(~w)~n", [?MODULE, {UDPPort, TCPPort}]),
