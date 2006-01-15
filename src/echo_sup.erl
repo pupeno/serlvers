@@ -8,5 +8,7 @@ start_link(UDPPort, TCPPort) ->
 
 init({UDPPort, TCPPort}) ->
     {ok, {{one_for_one, 1, 5},
-          [{echo_tcp, {echo_tcp, start_link, [TCPPort]}, permanent, 1000, worker, [echo_tcp]},
-	   {echo_udp, {echo_udp, start_link, [UDPPort]}, permanent, 1000, worker, [echo_udp]}]}}.
+          [{echo_tcp, {echo_launcher, start_link, [{tcp, TCPPort}]},
+	    permanent, 1000, worker, [echo_launcher]},
+	   {echo_udp, {echo_launcher, start_link, [{udp, UDPPort}]},
+	    permanent, 1000, worker, [echo_launcher]}]}}.
