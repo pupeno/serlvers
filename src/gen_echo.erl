@@ -60,6 +60,9 @@ handle_info({tcp, Socket, Packet}, {Module, ModState}) -> % Handle TCP packages.
     gen_tcp:send(Socket, Reply),                          % Send the reply.
     ok = inet:setopts(Socket, [{active, once}]),          % Enable receiving of packages, get the next one.
     {noreply, {Module, NewModState}};
+handle_info({tcp_closed, _Socket}, State) ->
+    io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {tcp_closed, _Socket}, State]),
+    {stop, normal, State};
 handle_info(_Info, State) ->
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
