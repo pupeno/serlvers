@@ -36,6 +36,13 @@ handle_cast(stop, State) ->
 handle_cast(_Request, State) ->
     {noreply, State}.
 
+% Handle UDP packages.
+handle_info({udp, Socket, IP, InPortNo, Packet}, State) -> % Socket and Socket are and must be the same, isn't Erlang awesome ?
+    Reply = echo(Packet),                        % Generate the reply.
+    gen_udp:send(Socket, IP, InPortNo, Reply),   % Send the reply.
+    ok = inet:setopts(Socket, [{active, once}]), % Enable receiving of packages, get the next one.
+    {noreply, State};
+% Handle TCP packages.
 handle_info({tcp, Socket, Packet}, State) ->     
     io:fwrite("~w:handle_info(~w, ~w) YEAH!~n", [?MODULE, {tcp, Socket, Packet}, State]),
     Reply = echo(Packet),                        % Generate the reply.
