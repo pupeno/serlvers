@@ -8,7 +8,7 @@ start() ->
     gen_echo:start(?MODULE, [], []).
 
 start(SupName) ->
-    io:fwrite("~w:start()~n", [?MODULE]),
+    io:fwrite("~w:start(~w)~n", [?MODULE, SupName]),
     gen_echo:start(SupName, ?MODULE, [], []).
 
 start_link() ->
@@ -16,7 +16,7 @@ start_link() ->
     gen_echo:start_link(?MODULE, [], []).
 
 start_link(SupName) ->
-    io:fwrite("~w:start_link()~n", [?MODULE]),
+    io:fwrite("~w:start_link(~w)~n", [?MODULE, SupName]),
     gen_echo:start_link(SupName, ?MODULE, [], []).
 
 stop(Process) ->

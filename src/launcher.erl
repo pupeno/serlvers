@@ -2,7 +2,7 @@
 -behaviour(gen_server).
 -export([start_link/3, start_link/4, stop/1]).
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
--export([acceptor/1]).
+-export([acceptor/2]).
 
 start_link(Protocol, Transport, Port) ->
     io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Protocol, Transport, Port]),
@@ -16,24 +16,27 @@ stop(Process) ->
     gen_server:cast(Process, stop).
 
 %% The follwing function is in charge of accept new TCP connections.
-acceptor(LSocket) ->
+acceptor(Protocol, LSocket) ->
     io:fwrite("~w:acceptor(~w)~n", [?MODULE, LSocket]),
     {ok, Socket} = gen_tcp:accept(LSocket),
-    inet:setopts(Socket, [{active, once}]),
-    {ok, Pid} = echo:start(), % A good idea might be adding this to a supervisor, although they are all temporary.
+    {ok, Pid} = Protocol:start(),                          % A good idea might be adding this to a supervisor, although they are all temporary.
     ok = gen_tcp:controlling_process(Socket, Pid),
-    gen_server:cast(Pid, {started, Socket}),
-    acceptor(LSocket).
+    gen_server:cast(Pid, {connected, Socket}),
+    acceptor(Protocol, LSocket).
 
 %% Callbacks.
 init({Protocol, tcp, Port}) ->
-    io:fwrite("~w:init(~w)~n", [?MODULE, {tcp, Port}]),
+    io:fwrite("~w:init(~w)~n", [?MODULE, {Protocol, tcp, Port}]),
     process_flag(trap_exit, true),
-    {ok, LSocket} = gen_tcp:listen(Port, [{active, once}]), % Open the tcp port.
-    spawn_link(?MODULE, acceptor, [LSocket]),               % Launch the acceptor.
-    {ok, {Protocol, tcp, LSocket}};
+    case gen_tcp:listen(Port, [{active, once}]) of              % Try to open the port.
+	{ok, LSocket} ->                                        % Port opened.
+	    spawn_link(?MODULE, acceptor, [Protocol, LSocket]), % Launch the acceptor.
+	    {ok, {Protocol, tcp, LSocket}};
+	{error, Reason} ->
+	    {stop, Reason}
+    end;
 init({Protocol, udp, Port}) ->
-    io:fwrite("~w:init(~w)~n", [?MODULE, {udp, Port}]),
+    io:fwrite("~w:init(~w)~n", [?MODULE, {Protocol, udp, Port}]),
     process_flag(trap_exit, true),
     {ok, Socket} = gen_udp:open(Port, [{active, once}]),              % Open the udp socket.
     {ok, Pid} = Protocol:start_link({local, udpWorkerName(Protocol)}), % One worker to take care of UDP.
