@@ -8,7 +8,12 @@ start_link(UDPPort, TCPPort) ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, {UDPPort, TCPPort}).
 
 stop() ->
-    exit(?MODULE, normal).
+    case (whereis(echo_sup)) of
+	undefined ->
+	    {ok, echo_sup_not_running};
+	Pid ->
+	    {ok, exit(Pid, normal)}
+    end.
 
 which_children() ->
     io:fwrite("~w:which_children()~n", [?MODULE]),
