@@ -10,7 +10,7 @@
 
 -module(launcher_sup).
 -behaviour(supervisor).
--export([start_link/4, stop/0, which_children/0]).
+-export([start_link/4, stop/0, children/0]).
 -export([init/1]).
 
 start_link(EchoUDPPort, EchoTCPPort, DaytimeUDPPort, DaytimeTCPPort) ->

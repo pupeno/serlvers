@@ -42,6 +42,6 @@ daytime(State) ->
 			      [Year, Month, Day, Hours, Minutes, Seconds])),
     {DayTime, State}.
 
-terminate(Reason, State) ->
+terminate(_Reason, _State) ->
     %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, State]),
     ok.
