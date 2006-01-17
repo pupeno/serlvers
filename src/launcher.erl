@@ -8,6 +8,12 @@
 %% Linking ErServers statically or dynamically with other modules is making a combined work based on ErServers. Thus, the terms and conditions of the GNU General Public License cover the whole combination.
 %% In addition, as a special exception, the copyright holders of ErServers give you permission to combine ErServers program with code included in the standard release of Erlang/OTP under the Erlang Public Licence (or modified versions of such code, with unchanged license). You may copy and distribute such a system following the terms of the GNU GPL for ErServers and the licenses of the other code concerned, provided that you include the source code of that other code when and as the GNU GPL requires distribution of source code.
 
+%% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
+%% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
+%% @doc TODO: write documentation.
+%% @see gen_daytime.
+%% @see gen_echo.
+
 -module(launcher).
 -behaviour(gen_server).
 -export([start_link/3, start_link/4]).
