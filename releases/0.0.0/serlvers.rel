@@ -1,0 +1,4 @@
+{release, {"serlvers", "0.0.0"}, {erts, "5.4"},
+ [{kernel, "2.10.7"},
+  {stdlib, "1.13.7"},
+  {sasl, "2.0.1"}]}.
