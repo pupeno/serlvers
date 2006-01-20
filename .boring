@@ -30,7 +30,7 @@
 \#
 \.cvsignore$
 (^|/)Thumbs\.db$
-\*.beam
-\*.script
-\*.boot
+\.beam
+\.script
+\.boot
 \.sconsign
