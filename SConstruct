@@ -21,7 +21,9 @@ Help(opts.GenerateHelpText(env))
 
 beams = env.Erlang(["src/launcher",
                     "src/gen_echo",
-                    "src/gen_daytime"],
+                    "src/gen_chargen",
+                    "src/gen_daytime",
+                    "src/gen_time"],
                    OUTPUT="ebin/")
 
 # Install directories.
