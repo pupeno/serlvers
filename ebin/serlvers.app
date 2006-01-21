@@ -3,4 +3,4 @@
   {vsn, "0.0.0"},
   {modules, [launcher, gen_echo, gen_daytime]},
   {registered, []},
-  {applications, [kernel, stdlib, sasl]}]}.
+  {applications, [kernel, stdlib]}]}.
