@@ -34,3 +34,5 @@
 \.script
 \.boot
 \.sconsign
+\.Serlvers.conf
+\.directory
