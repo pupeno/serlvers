@@ -9,8 +9,7 @@
 
 env = Environment(tools = ["default", "erlang"], toolpath = ["../SConsErlang/"])
 
-env.Erlang(["lib/serlvers/src/launcher",
-            "lib/serlvers/src/gen_echo",
-            "lib/serlvers/src/gen_daytime"], 
-           OUTPUT="lib/serlvers/ebin/",
-           LIBPATH=["lib/serlvers/ebin/"])
+env.Erlang(["src/launcher",
+            "src/gen_echo",
+            "src/gen_daytime"], 
+           OUTPUT="ebin/")
