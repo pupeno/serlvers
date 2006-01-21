@@ -9,7 +9,27 @@
 
 env = Environment(tools = ["default", "erlang"])
 
-env.Erlang(["src/launcher",
-            "src/gen_echo",
-            "src/gen_daytime"], 
-           OUTPUT="ebin/")
+# Configuration.
+configFile = ".Serlvers.conf"
+opts = Options(configFile)
+opts.Add(PathOption("PREFIX", "Prefix directory (where Erlang is installed)", "/usr/local/lib/erlang/"))
+opts.Update(env)
+opts.Save(configFile, env)
+
+# Help.
+Help(opts.GenerateHelpText(env))
+
+beams = env.Erlang(["src/launcher",
+                    "src/gen_echo",
+                    "src/gen_daytime"],
+                   OUTPUT="ebin/")
+
+# Install directories.
+installDir = "$PREFIX/lib/serlvers-0.0.0/"
+
+# chicken.py, no build needed.
+env.Install(installDir + "ebin/", beams)
+
+# Alias for installing.
+env.Alias("install", installDir)
+
