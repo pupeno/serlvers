@@ -32,8 +32,8 @@ installDir = "$PREFIX/lib/serlvers-0.0.0/"
 
 # chicken.py, no build needed.
 env.Install(installDir + "ebin/", beams)
-env.Install(installDir + "src/", sources)
 env.Install(installDir + "ebin/", "ebin/serlvers.app")
+env.Install(installDir + "src/", sources)
 
 # Alias for installing.
 env.Alias("install", installDir)
