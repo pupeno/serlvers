@@ -19,18 +19,20 @@ opts.Save(configFile, env)
 # Help.
 Help(opts.GenerateHelpText(env))
 
-beams = env.Erlang(["src/launcher",
-                    "src/gen_echo",
-                    "src/gen_chargen",
-                    "src/gen_daytime",
-                    "src/gen_time"],
-                   OUTPUT="ebin/")
+
+sources = ["src/launcher.erl",
+           "src/gen_echo.erl",
+           "src/gen_chargen.erl",
+           "src/gen_daytime.erl",
+           "src/gen_time.erl"]
+beams = env.Erlang(sources, OUTPUT="ebin/")
 
 # Install directories.
 installDir = "$PREFIX/lib/serlvers-0.0.0/"
 
 # chicken.py, no build needed.
 env.Install(installDir + "ebin/", beams)
+env.Install(installDir + "src/", sources)
 env.Install(installDir + "ebin/", "ebin/serlvers.app")
 
 # Alias for installing.
