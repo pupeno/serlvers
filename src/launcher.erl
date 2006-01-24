@@ -21,23 +21,23 @@
 -export([acceptor/2]).
 
 start_link(Protocol, Transport, Port) ->
-    %io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Protocol, Transport, Port]),
+    %%io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Protocol, Transport, Port]),
     gen_server:start_link(?MODULE, {Protocol, Transport, Port}, []).
 
 start_link(SupName, Protocol, Transport, Port) ->
-    %io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Protocol, Transport, Port]),
+    %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Protocol, Transport, Port]),
     gen_server:start_link(SupName, ?MODULE, {Protocol, Transport, Port}, []).
 
 stop({_Scope, Name}) ->
-    %io:fwrite("~w:stop(~w)~n", [?MODULE, {_Scope, Name}]),
+    %%io:fwrite("~w:stop(~w)~n", [?MODULE, {_Scope, Name}]),
     gen_server:cast(Name, stop);
 stop(SupName) ->
-    %io:fwrite("~w:stop(~w)~n", [?MODULE, SupName]),
+    %%io:fwrite("~w:stop(~w)~n", [?MODULE, SupName]),
     gen_server:cast(SupName, stop).
 
 %% The follwing function is in charge of accept new TCP connections.
 acceptor(Protocol, LSocket) ->
-    %io:fwrite("~w:acceptor(~w)~n", [?MODULE, LSocket]),
+    %%io:fwrite("~w:acceptor(~w)~n", [?MODULE, LSocket]),
     case gen_tcp:accept(LSocket) of                                % Wait for an incomming connection.
         {ok, Socket} ->                                            % Got a succesfull incomming connection.
             case Protocol:start() of                               % Try to run a worker.
@@ -54,7 +54,7 @@ acceptor(Protocol, LSocket) ->
 
 %% Callbacks.
 init({Protocol, tcp, Port}) ->
-    %io:fwrite("~w:init(~w)~n", [?MODULE, {Protocol, tcp, Port}]),
+    %%io:fwrite("~w:init(~w)~n", [?MODULE, {Protocol, tcp, Port}]),
     process_flag(trap_exit, true),
     case gen_tcp:listen(Port, [{active, once}]) of              % Try to open the port.
 	{ok, LSocket} ->                                        % Port opened.
@@ -64,7 +64,7 @@ init({Protocol, tcp, Port}) ->
 	    {stop, {Protocol, tcp, Port, Reason}}               % Try to return, hopefully, enough information to found out what the error was.
     end;
 init({Protocol, udp, Port}) ->
-    %io:fwrite("~w:init(~w)~n", [?MODULE, {Protocol, udp, Port}]),
+    %%io:fwrite("~w:init(~w)~n", [?MODULE, {Protocol, udp, Port}]),
     process_flag(trap_exit, true),
     case gen_udp:open(Port, [{active, once}]) of                          % Try to open the udp port.
         {ok, Socket} ->                                                   % Port opened.
@@ -80,31 +80,31 @@ init({Protocol, udp, Port}) ->
     end.                
   
 handle_call(_Request, _From, State) ->
-    %io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
+    %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 handle_cast(stop, State) ->
-    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
 handle_cast(_Request, State) ->
-    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
 handle_info(_Info, State) ->
-    %io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
+    %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
     
 terminate(_Reason, {_Protocol, tcp, LSocket}) ->
-    %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Protocol, tcp, LSocket}]),
+    %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Protocol, tcp, LSocket}]),
     gen_tcp:close(LSocket), % Close the socket, we are done.
     ok;
 terminate(_Reason, {_Protocol, udp, Socket}) ->
-    %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Protocol, udp, Socket}]),
+    %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Protocol, udp, Socket}]),
     gen_udp:close(Socket),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
-    %io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
+    %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
 
 %% Utils.
