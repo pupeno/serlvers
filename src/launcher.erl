@@ -16,7 +16,7 @@
 
 -module(launcher).
 -behaviour(gen_server).
--export([start_link/3, start_link/4]).
+-export([start_link/3, start_link/4, stop/1]).
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([acceptor/2]).
 
@@ -27,6 +27,13 @@ start_link(Protocol, Transport, Port) ->
 start_link(SupName, Protocol, Transport, Port) ->
     %io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Protocol, Transport, Port]),
     gen_server:start_link(SupName, ?MODULE, {Protocol, Transport, Port}, []).
+
+stop({_Scope, Name}) ->
+    %io:fwrite("~w:stop(~w)~n", [?MODULE, {_Scope, Name}]),
+    gen_server:cast(Name, stop);
+stop(SupName) ->
+    %io:fwrite("~w:stop(~w)~n", [?MODULE, SupName]),
+    gen_server:cast(SupName, stop).
 
 %% The follwing function is in charge of accept new TCP connections.
 acceptor(Protocol, LSocket) ->
@@ -76,6 +83,9 @@ handle_call(_Request, _From, State) ->
     %io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
+handle_cast(stop, State) ->
+    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
+    {stop, normal, State};
 handle_cast(_Request, State) ->
     %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
@@ -85,11 +95,11 @@ handle_info(_Info, State) ->
     {noreply, State}.
     
 terminate(_Reason, {_Protocol, tcp, LSocket}) ->
-    io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Protocol, tcp, LSocket}]),
+    %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Protocol, tcp, LSocket}]),
     gen_tcp:close(LSocket), % Close the socket, we are done.
     ok;
 terminate(_Reason, {_Protocol, udp, Socket}) ->
-    io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Protocol, udp, Socket}]),
+    %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Protocol, udp, Socket}]),
     gen_udp:close(Socket),
     ok.
 
