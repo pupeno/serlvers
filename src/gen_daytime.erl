@@ -24,30 +24,38 @@ behaviour_info(callbacks) ->
 behaviour_info(_) ->
     undefined.
 
-%% API
+%% @doc Start an unnamed daytime server.
+%% @see start/4, start_link/3
 start(Module, Args, Options) ->
     %io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
 
+%% @doc Start a named daytime server.
+%% @see start/3, start_link/4
 start(SupName, Module, Args, Options) ->
     %io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
+%% @doc Start an unnamed daytime server and link to it.
+%% @see start_link/4, start/3
 start_link(Module, Args, Options) ->
     %io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start_link(?MODULE, {Module, Args}, Options).
 
+%% @doc Start a named daytime server and link to it.
+%% @see start_link/3, start/4
 start_link(SupName, Module, Args, Options) ->
     %io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
-%% Callbacks.
+%% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular daytime server gets called (same as this module implementing a particular gen_server).
 init({Module, Args}) ->
     %io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
     process_flag(trap_exit, true),
     {ok, ModState} = Module:init(Args),
     {ok, {Module, ModState}}.
 
+%% @doc The base module, gen_server may call this function. Currently there's nothing to be done here.
 handle_call(_Request, _From, State) ->
     %io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
@@ -73,13 +81,14 @@ handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handl
 handle_info(_Info, State) ->
     %io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
-    
+
+%% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a daytime server.
 terminate(Reason, {Module, ModState}) ->
     %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
     ok = Module:terminate(Reason, ModState),
     ok.
 
+%% @doc Err... code changes ?
 code_change(_OldVsn, State, _Extra) ->
     %io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
-    
