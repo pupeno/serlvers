@@ -19,31 +19,32 @@
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([behaviour_info/1]).
 
+%% @doc Function used by Erlang (compiler?) to ensure that a module implementing gen_server really is exporting the needed functions.
 behaviour_info(callbacks) ->
     [{init, 1}, {daytime, 1}, {terminate, 2}];
 behaviour_info(_) ->
     undefined.
 
 %% @doc Start an unnamed daytime server.
-%% @see start/4, start_link/3
+%% @see start/4. start_link/3
 start(Module, Args, Options) ->
     %io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named daytime server.
-%% @see start/3, start_link/4
+%% @see start/3. start_link/4
 start(SupName, Module, Args, Options) ->
     %io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Start an unnamed daytime server and link to it.
-%% @see start_link/4, start/3
+%% @see start_link/4. start/3
 start_link(Module, Args, Options) ->
     %io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start_link(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named daytime server and link to it.
-%% @see start_link/3, start/4
+%% @see start_link/3. start/4
 start_link(SupName, Module, Args, Options) ->
     %io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
@@ -60,6 +61,7 @@ handle_call(_Request, _From, State) ->
     %io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
+%% @doc This fuction is called by gen_server when a message is received. We handle two types of messages, a stop that stops the daytime server and a connected that triggers the functionallity of the daytime server by calling the function daytime/1 (in the case of TCP).
 handle_cast(stop, State) ->
     %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
@@ -72,6 +74,7 @@ handle_cast(_Request, State) ->
     %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
+%% @doc This function is called by gen_server and is used to handle the UDP case by calling daytime/1.
 handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
     %io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
     {Reply, NewModState} = Module:daytime(ModState), % Generate the reply.
