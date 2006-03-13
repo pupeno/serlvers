@@ -10,7 +10,7 @@
 
 %% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
 %% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
-%% @doc TODO: Write documentation.
+%% @doc The gen_echo behaviour is used to implement Echo servers according to <a href="http://www.ietf.org/rfc/rfc862.txt">RFC862</a>.
 %% @see launcher.
 
 -module(gen_echo).
@@ -19,38 +19,52 @@
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([behaviour_info/1]).
 
+%% @doc Function used by Erlang (compiler?) to ensure that a module implementing gen_server really is exporting the needed functions.
 behaviour_info(callbacks) ->
     [{init,1}, {echo,2}, {terminate, 2}];
 behaviour_info(_) ->
     undefined.
 
-%% API
+%% @doc Start an unamed echo server.
+%% @see start/4
+%% @see start_link/3.
 start(Module, Args, Options) ->
     io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
 
+%% @doc Start a named echo server.
+%% @see start/3
+%% @see start_link/4
 start(SupName, Module, Args, Options) ->
     io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
+%% @doc Start an unnamed echo server and link to it.
+%% @see start_link/4
+%% @see start/3
 start_link(Module, Args, Options) ->
     io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start_link(?MODULE, {Module, Args}, Options).
 
+%% @doc Start a named daytime echo and link to it.
+%% @see start_link/3
+%% @see start/4
 start_link(SupName, Module, Args, Options) ->
     io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
+%% @doc Stop a named process
 stop(Process) ->
     gen_server:handle_cast(Process, stop).
 
-%% Callbacks.
+%% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular echo server gets called (same as this module implementing a particular gen_server).
 init({Module, Args}) ->
     io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
     process_flag(trap_exit, true),
     {ok, ModState} = Module:init(Args),
     {ok, {Module, ModState}}.
 
+%% @doc The base module, gen_server may call this function. Currently there's nothing to be done here.
 handle_call(_Request, _From, State) ->
     io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
