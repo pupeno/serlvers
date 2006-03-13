@@ -26,25 +26,29 @@ behaviour_info(_) ->
     undefined.
 
 %% @doc Start an unnamed daytime server.
-%% @see start/4. start_link/3
+%% @see start/4
+%% @see start_link/3
 start(Module, Args, Options) ->
     %io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named daytime server.
-%% @see start/3. start_link/4
+%% @see start/3
+%% @see start_link/4
 start(SupName, Module, Args, Options) ->
     %io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Start an unnamed daytime server and link to it.
-%% @see start_link/4. start/3
+%% @see start_link/4
+%% @see start/3
 start_link(Module, Args, Options) ->
     %io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start_link(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named daytime server and link to it.
-%% @see start_link/3. start/4
+%% @see start_link/3
+%% @see start/4
 start_link(SupName, Module, Args, Options) ->
     %io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
