@@ -69,6 +69,8 @@ handle_call(_Request, _From, State) ->
     io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
+%% @doc This fuction is called by gen_server when a message is received. We only handle the stop message here. We ignore the rest.
+%% @private Only gen_server should call this module.
 handle_cast(stop, State) ->
     io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
@@ -76,31 +78,36 @@ handle_cast(_Request, State) ->
     io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
+%% @doc This function is called by gen_server when a message is received and here we call the echo function in the particular implementation to use the returned data as reply. This function handles both the TCP and UDP cases.
+%% @private Only gen_server should call this module.
 handle_info({udp, Socket, IP, InPortNo, Packet}, {Module, ModState}) -> % Handle UDP packages.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, Packet} , {Module, ModState}]),
-    {Reply, NewModState} = Module:echo(Packet, ModState), % Generate the reply.
-    gen_udp:send(Socket, IP, InPortNo, Reply),            % Send the reply.
-    ok = inet:setopts(Socket, [{active, once}]),          % Enable receiving of packages, get the next one.
+    {Reply, NewModState} = Module:echo(Packet, ModState),               % Generate the reply.
+    gen_udp:send(Socket, IP, InPortNo, Reply),                          % Send the reply.
+    ok = inet:setopts(Socket, [{active, once}]),                        % Enable receiving of packages, get the next one.
     {noreply, {Module, NewModState}};
-% Handle TCP packages.
 handle_info({tcp, Socket, Packet}, {Module, ModState}) -> % Handle TCP packages.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {tcp, Socket, Packet}, {Module, ModState}]),
     {Reply, NewModState} = Module:echo(Packet, ModState), % Generate the reply.
     gen_tcp:send(Socket, Reply),                          % Send the reply.
     ok = inet:setopts(Socket, [{active, once}]),          % Enable receiving of packages, get the next one.
     {noreply, {Module, NewModState}};
-handle_info({tcp_closed, _Socket}, State) ->
+handle_info({tcp_closed, _Socket}, State) -> % Handle the closing of the TCP connection.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {tcp_closed, _Socket}, State]),
-    {stop, normal, State};
-handle_info(_Info, State) ->
+    {stop, normal, State};                   % We just stop this particular server, we are done.
+handle_info(_Info, State) -> % Other cases.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
-    {noreply, State}.
-    
+    {noreply, State}.        % Just ignore them.
+
+%% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a echo server.
+%% @private Only gen_server should call this module.  
 terminate(Reason, {Module, ModState}) ->
     io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
     ok = Module:terminate(Reason, ModState),
     ok.
 
+%% @doc Err... code changes ?
+%% @private I think no one is interested in this function, yet.
 code_change(_OldVsn, State, _Extra) ->
     io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
