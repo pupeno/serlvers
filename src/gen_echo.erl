@@ -53,7 +53,7 @@ start_link(SupName, Module, Args, Options) ->
     io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
-%% @doc Stop a named process
+%% @doc Stop a named process.
 stop(Process) ->
     gen_server:handle_cast(Process, stop).
 
