@@ -59,7 +59,7 @@ stop(Process) ->
     gen_server:handle_cast(Process, stop).
 
 %% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular daytime server gets called (same as this module implementing a particular gen_server).
-%% @private Only gen_server should call this module.
+%% @private Only gen_server should call this function.
 init({Module, Args}) ->
     %io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
     process_flag(trap_exit, true),
@@ -67,13 +67,13 @@ init({Module, Args}) ->
     {ok, {Module, ModState}}.
 
 %% @doc The base module, gen_server may call this function. Currently there's nothing to be done here.
-%% @private Only gen_server should call this module.
+%% @private Only gen_server should call this function.
 handle_call(_Request, _From, State) ->
     %io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc This fuction is called by gen_server when a message is received. We handle two types of messages, a stop that stops the daytime server and a connected that triggers the functionallity of the daytime server by calling the function daytime/1 (in the case of TCP).
-%% @private Only gen_server should call this module.
+%% @private Only gen_server should call this function.
 handle_cast(stop, State) ->
     %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
@@ -87,7 +87,7 @@ handle_cast(_Request, State) ->
     {noreply, State}.
 
 %% @doc This function is called by gen_server and is used to handle the UDP case by calling daytime/1.
-%% @private Only gen_server should call this module.
+%% @private Only gen_server should call this function.
 handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
     %io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
     {Reply, NewModState} = Module:daytime(ModState), % Generate the reply.
@@ -99,7 +99,7 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 %% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a daytime server.
-%% @private Only gen_server should call this module.
+%% @private Only gen_server should call this function.
 terminate(Reason, {Module, ModState}) ->
     %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
     ok = Module:terminate(Reason, ModState),

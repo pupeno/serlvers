@@ -10,7 +10,7 @@
 
 %% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
 %% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
-%% @doc The gen_daytime behaviour is used to implement Daytime servers according to <a href="http://www.ietf.org/rfc/rfc867.txt">RFC867</a>.
+%% @doc The gen_time behaviour is used to implement Time servers according to <a href="http://www.ietf.org/rfc/rfc868.txt">RFC868</a>.
 %% @see launcher.
 
 -module(gen_time).
@@ -19,39 +19,61 @@
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([behaviour_info/1]).
 
+%% @doc Function used by Erlang (compiler?) to ensure that a module implementing gen_server really is exporting the needed functions.
+%% @private Only Erlang itself should call this function.
 behaviour_info(callbacks) ->
     [{init, 1}, {time, 1}, {terminate, 2}];
 behaviour_info(_) ->
     undefined.
 
-%% API
+%% @doc Start an unnamed time server.
+%% @see start/4
+%% @see start_link/3
 start(Module, Args, Options) ->
     %%io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
 
+%% @doc Start a named time server.
+%% @see start/3
+%% @see start_link/4
 start(SupName, Module, Args, Options) ->
     %%io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
+%% @doc Start an unnamed time server and link to it.
+%% @see start_link/4
+%% @see start/3
 start_link(Module, Args, Options) ->
     %%io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start_link(?MODULE, {Module, Args}, Options).
 
+%% @doc Start a named time server and link to it.
+%% @see start_link/3
+%% @see start/4
 start_link(SupName, Module, Args, Options) ->
     %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
-%% Callbacks.
+%% @doc Stop a named process.
+stop(Process) ->
+    gen_server:handle_cast(Process, stop).
+
+%% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular time server gets called (same as this module implementing a particular gen_server).
+%% @private Only gen_server should call this function.
 init({Module, Args}) ->
     %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
     process_flag(trap_exit, true),
     {ok, ModState} = Module:init(Args),
     {ok, {Module, ModState}}.
 
+%% @doc The base module, gen_server may call this function. Currently there's nothing to be done here.
+%% @private Only gen_server should call this function.
 handle_call(_Request, _From, State) ->
     %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
+%% @doc This fuction is called by gen_server when a message is received. We handle two types of messages, a stop that stops the daytime server and a connected that triggers the functionallity of the time server by calling the function time/1 (in the case of TCP).
+%% @private Only gen_server should call this function.
 handle_cast(stop, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
@@ -64,6 +86,8 @@ handle_cast(_Request, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
+%% @doc This function is called by gen_server and is used to handle the UDP case by calling time/1.
+%% @private Only gen_server should call this function.
 handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
     {Reply, NewModState} = Module:time(ModState), % Generate the reply.
@@ -73,12 +97,16 @@ handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handl
 handle_info(_Info, State) ->
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
-    
+
+%% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a time server.
+%% @private Only gen_server should call this function.    
 terminate(Reason, {Module, ModState}) ->
     %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
     ok = Module:terminate(Reason, ModState),
     ok.
 
+%% @doc Err... code changes ?
+%% @private I think no one is interested in this function, yet.
 code_change(_OldVsn, State, _Extra) ->
     %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
