@@ -10,7 +10,13 @@
 
 %% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
 %% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
-%% @doc The gen_daytime behaviour is used to implement Daytime servers according to <a href="http://www.ietf.org/rfc/rfc867.txt">RFC867</a>.
+%% @doc <p>The gen_daytime behaviour is used to implement Daytime servers according to <a href="http://www.ietf.org/rfc/rfc867.txt">RFC867</a>.</p>
+%% <p>To make a daytime server make a module implementing the behaviour gen_daytime, that requires the following functions:</p>
+%% <ul>
+%%  <li>init/1: Initialization code. It gets the arguments passed to one of the start functions and it should return the state of the daytime server.</li>
+%%  <li>daytime/1: The main function. The parameter is the state of the server. The result should be a tuple of two items, the first being the string that would be sent as daytime, the second being the state.</li>
+%%  <li>terminate/2: Any clean up code should be here. The first parameter is the reason to terminate, the second is the state.</li>
+%% </ul>
 %% @see launcher.
 
 -module(gen_daytime).
