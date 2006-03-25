@@ -22,11 +22,37 @@
 
 -module(launcher).
 -behaviour(gen_server).
--export([start_link/3, start_link/4, stop/1]).
+-export([start/3, start/4, start_link/3, start_link/4, stop/1]).
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([acceptor/2]).
 
-%% @doc <p>This function is the same as {@link start_link/4} except that starts an anonymous/unnamed process.</p>
+%% @doc Launch an unnamed serlver.
+%% <p>See {@link start_link/4} for further explanation of the parameters.</p>
+%% @see start/4
+%% @see start_link/3
+%% @since 0.0.0
+%% @spec (Module::atom(), Transport::transport(), Port::integer()) -> Result
+%%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
+start(Module, Transport, Port) ->
+    %io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
+    gen_server:start(?MODULE, {Module, Transport, Port}, []).
+
+%% @doc Launch a named serlver.
+%% <p>See {@link start_link/4} for further explanation of the parameters.</p>
+%% @see start/3
+%% @see start_link/4
+%% @since 0.0.0
+%% @spec (Name, Module::atom(), Transport::transport(), Port::integer()) -> Result
+%%   Name = {local, atom()} | {global, atom()}
+%%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
+start(SupName, Module, Transport, Port) ->
+    %io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
+    gen_server:start(SupName, ?MODULE, {Module, Transport, Port}, []).
+
+%% @doc Launch an unamed serlver and link to it.
+%% <p>See {@link start_link/4} for further explanation of the parameters.</p>
+%% @see start_link/4
+%% @see start/3
 %% @since 0.0.0
 %% @spec (Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
@@ -34,13 +60,12 @@ start_link(Module, Transport, Port) ->
     %%io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Transport, Port]),
     gen_server:start_link(?MODULE, {Module, Transport, Port}, []).
 
-%% @doc
-%% Starts a named process that implemenets a service.
-%%
+%% @doc Launch a named serlver and link to it.
 %% <p>Name is passed to gen_server:start_link/4 as is.</p>
 %% <p>Module is the name of a module implementing one of the service behaviours (gen_echo, gen_chargen, etc).</p>
 %% <p>The Port port will be opened using Trasport (either tcp or udp) as the transport. Not all services can work with all transports.</p>
-%%
+%% @see start_link/3
+%% @see start/4
 %% @since 0.0.0
 %% @spec (Name, Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Name = {local, atom()} | {global, atom()}
@@ -49,10 +74,12 @@ start_link(SupName, Module, Transport, Port) ->
     %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Port]),
     gen_server:start_link(SupName, ?MODULE, {Module, Transport, Port}, []).
 
-%% @doc
-%% Stops a running process identified by Name.
-%%
+%% @doc Stops a running process identified by Name.
 %% <p>This function is intended to help debugging while developing servers that are launched. When a server goes in production, launcher should be run by a supervisor that takes care of starting and stoping.</p>
+%% @see start/3
+%% @see start/4
+%% @see start_link/3
+%% @see start_link/4
 %% @since 0.0.0
 %% @spec (Name) -> ok
 %%        Name = atom() | {local, atom()} | {global, atom()}
@@ -70,7 +97,7 @@ acceptor(Module, LSocket) ->
     %%io:fwrite("~w:acceptor(~w)~n", [?MODULE, LSocket]),
     case gen_tcp:accept(LSocket) of                                % Wait for an incomming connection.
         {ok, Socket} ->                                            % Got a succesfull incomming connection.
-            case Module:start() of                               % Try to run a worker.
+            case Module:start() of                                 % Try to run a worker.
                 {ok, Pid} ->                                       % Worker running.
                     ok = gen_tcp:controlling_process(Socket, Pid), % Let the worker control this connection.
                     gen_server:cast(Pid, {connected, Socket}),     % Worker, wake up, you have to work (maybe).
@@ -102,7 +129,7 @@ init({Module, udp, Port}) ->
             case Module:start_link({local, udpWorkerName(Module)}) of % Try to run a worker for this UDP port.
                 {ok, Pid} ->                                              % Worker running.
                     gen_udp:controlling_process(Socket, Pid),             % Give the UDP port to the worker.
-                    {ok, {Module, udp, Socket}};                        % Done.
+                    {ok, {Module, udp, Socket}};                          % Done.
                 {error, Error} ->                                         % Worker could not be run.
                     {stop, {Module, udp, Socket, Error}}                % Try to return, hopefully, enough information to found out what the error was.
             end;
