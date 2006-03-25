@@ -10,7 +10,7 @@
 
 %% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
 %% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
-%% @doc <p>The gen_daytime behaviour is used to implement Daytime servers according to <a href="http://www.ietf.org/rfc/rfc867.txt">RFC867</a>.</p>
+%% @doc The gen_daytime behaviour is used to implement Daytime servers according to <a href="http://www.ietf.org/rfc/rfc867.txt">RFC867</a>.
 %% <p>To make a daytime server make a module implementing the behaviour gen_daytime, that requires the following functions:</p>
 %% <ul>
 %%  <li>init/1: Initialization code. It gets the arguments passed to one of the start functions and it should return the state of the daytime server.</li>
@@ -113,7 +113,7 @@ terminate(Reason, {Module, ModState}) ->
     ok = Module:terminate(Reason, ModState),
     ok.
 
-%% @doc Err... code changes ?
+%% @doc Err... &lt;sarcasm&gt;code changes ?&lt;/sarcasm&gt;
 %% @private I think no one is interested in this function, yet.
 code_change(_OldVsn, State, _Extra) ->
     %io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),

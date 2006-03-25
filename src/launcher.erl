@@ -96,7 +96,7 @@ stop(Name) ->
 
 %% @doc The follwing function is in charge of accepting new TCP connections.
 %% <p>It is <i>spawned</i> from {@link init} when called for a tcp server.</p>
-%% @private
+%% @private Only called from {@link init}.
 %% @since 0.0.0
 acceptor(Module, LSocket) ->
     %%io:fwrite("~w:acceptor(~w)~n", [?MODULE, LSocket]),
@@ -115,7 +115,7 @@ acceptor(Module, LSocket) ->
     end.
 
 %% @doc Called by gen_server to initialize the launcher.
-%% @private
+%% @private Only gen_server should call this function.
 %% @since 0.0.0
 init({Module, tcp, Port}) ->
     %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, tcp, Port}]),
@@ -144,14 +144,14 @@ init({Module, udp, Port}) ->
     end.                
 
 %% @doc No calls to answer.
-%% @private
+%% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_call(_Request, _From, State) ->
     %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc The only cast to answer is to stop.
-%% @private
+%% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_cast(stop, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
@@ -161,14 +161,14 @@ handle_cast(_Request, State) ->
     {noreply, State}.
 
 %% @doc No other signals to answer.
-%% @private
+%% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_info(_Info, State) ->
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
 
 %% @doc On termination, close the sockets.
-%% @private
+%% @private Only gen_server should call this function.
 %% @since 0.0.0
 terminate(_Reason, {_Module, tcp, LSocket}) ->
     %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, tcp, LSocket}]),
@@ -180,14 +180,14 @@ terminate(_Reason, {_Module, udp, Socket}) ->
     ok.
 
 %% @doc Err... &lt;sarcasm&gt;code changes ?&lt;/sarcasm&gt;
-%% @private
+%% @private I think no one is interested in this function, yet.
 %% @since 0.0.0
 code_change(_OldVsn, State, _Extra) ->
     %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
 
 %% @doc Helper function to create an atom with the name of an udp worker.
-%% @private
+%% @private Internal helper function.
 %% @since 0.0.0
 udpWorkerName(Module) ->
     list_to_atom(string:concat(atom_to_list(Module), "_udp_worker")).
