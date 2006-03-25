@@ -10,7 +10,11 @@
 
 %% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
 %% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
-%% @doc <p>Launcher launches tcp and udp serviceses based on the behaviours of Serlvers.</p>
+%% @doc Launcher launches tcp and udp serviceses based on the behaviours of Serlvers.
+%% <p>It basically handles opening the sockets and waiting for data to latter send it to the serlvers.</p>
+%% <p>Whenever you see the word "serlver" used as a noun it refeers to a module implementing one of the Serlvers behaviours like {@link gen_echo}, {@link gen_daytime}, etc.</p>
+%% <p>For tcp services a new worker is spawned on each connection and that worker handles the connection untill termination. The message {connected, Socket} where connected is an atom and Socket the connected socket is sent to the worker upon connection.</p>
+%% <p>For udp services only one worker is spawned which will handle all datagrams.</p>
 %% @see gen_echo.
 %% @see gen_chargen.
 %% @see gen_daytime.
@@ -75,7 +79,7 @@ start_link(SupName, Module, Transport, Port) ->
     gen_server:start_link(SupName, ?MODULE, {Module, Transport, Port}, []).
 
 %% @doc Stops a running process identified by Name.
-%% <p>This function is intended to help debugging while developing servers that are launched. When a server goes in production, launcher should be run by a supervisor that takes care of starting and stoping.</p>
+%% <p>This function is intended to help debugging while developing serlvers. When a server goes in production, launcher should be run by a supervisor that takes care of starting and stoping.</p>
 %% @see start/3
 %% @see start/4
 %% @see start_link/3
@@ -90,7 +94,8 @@ stop(Name) ->
     %%io:fwrite("~w:stop(~w)~n", [?MODULE, SupName]),
     gen_server:cast(Name, stop).
 
-%% @doc The follwing function is in charge of accept new TCP connections.
+%% @doc The follwing function is in charge of accepting new TCP connections.
+%% <p>It is <i>spawned</i> from {@link init} when called for a tcp server.</p>
 %% @private
 %% @since 0.0.0
 acceptor(Module, LSocket) ->
@@ -100,49 +105,52 @@ acceptor(Module, LSocket) ->
             case Module:start() of                                 % Try to run a worker.
                 {ok, Pid} ->                                       % Worker running.
                     ok = gen_tcp:controlling_process(Socket, Pid), % Let the worker control this connection.
-                    gen_server:cast(Pid, {connected, Socket}),     % Worker, wake up, you have to work (maybe).
-                    acceptor(Module, LSocket);                   % Show must go on.
+                    gen_server:cast(Pid, {connected, Socket}),     % Worker, wake up, you have to work (this is for the cases where upon connection, the worker has to do something, like daytime and time, unlike echo).
+                    acceptor(Module, LSocket);                     % Accept the next connection.
                 {error, Error} ->                                  % Worker could not be run.
-                    {stop, {Module, LSocket, Error}}             % Try to return, hopefully, enough information to found out what the error was.
+                    {stop, {Module, LSocket, Error}}               % Try to return, hopefully, enough information to found out what the error was.
             end;
 	{error, Reason} ->                                         % Error accepting connection.
-	    {stop, {Module, LSocket, Reason}}                    % Try to return, hopefully, enough information to found out what the error was.
+	    {stop, {Module, LSocket, Reason}}                      % Try to return, hopefully, enough information to found out what the error was.
     end.
 
+%% @doc Called by gen_server to initialize the launcher.
 %% @private
 %% @since 0.0.0
 init({Module, tcp, Port}) ->
     %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, tcp, Port}]),
     process_flag(trap_exit, true),
-    case gen_tcp:listen(Port, [{active, once}]) of              % Try to open the port.
-	{ok, LSocket} ->                                        % Port opened.
+    case gen_tcp:listen(Port, [{active, once}]) of            % Try to open the port.
+	{ok, LSocket} ->                                      % Port opened.
 	    spawn_link(?MODULE, acceptor, [Module, LSocket]), % Launch the acceptor.
 	    {ok, {Module, tcp, LSocket}};                     % We are done.
-	{error, Reason} ->                                      % Error opening port.
+	{error, Reason} ->                                    % Error opening port.
 	    {stop, {Module, tcp, Port, Reason}}               % Try to return, hopefully, enough information to found out what the error was.
     end;
 init({Module, udp, Port}) ->
     %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, udp, Port}]),
     process_flag(trap_exit, true),
-    case gen_udp:open(Port, [{active, once}]) of                          % Try to open the udp port.
-        {ok, Socket} ->                                                   % Port opened.
+    case gen_udp:open(Port, [{active, once}]) of                      % Try to open the udp port.
+        {ok, Socket} ->                                               % Port opened.
             case Module:start_link({local, udpWorkerName(Module)}) of % Try to run a worker for this UDP port.
-                {ok, Pid} ->                                              % Worker running.
-                    gen_udp:controlling_process(Socket, Pid),             % Give the UDP port to the worker.
-                    {ok, {Module, udp, Socket}};                          % Done.
-                {error, Error} ->                                         % Worker could not be run.
-                    {stop, {Module, udp, Socket, Error}}                % Try to return, hopefully, enough information to found out what the error was.
+                {ok, Pid} ->                                          % Worker running.
+                    gen_udp:controlling_process(Socket, Pid),         % Give the UDP port to the worker.
+                    {ok, {Module, udp, Socket}};                      % Done.
+                {error, Error} ->                                     % Worker could not be run.
+                    {stop, {Module, udp, Socket, Error}}              % Try to return, hopefully, enough information to found out what the error was.
             end;
-         	{error, Reason} ->                                        % Error opening port.
-	    {stop, {Module, tcp, Port, Reason}}                         % Try to return, hopefully, enough information to found out what the error was.
+         	{error, Reason} ->                                    % Error opening port.
+	    {stop, {Module, tcp, Port, Reason}}                       % Try to return, hopefully, enough information to found out what the error was.
     end.                
 
+%% @doc No calls to answer.
 %% @private
 %% @since 0.0.0
 handle_call(_Request, _From, State) ->
     %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
+%% @doc The only cast to answer is to stop.
 %% @private
 %% @since 0.0.0
 handle_cast(stop, State) ->
@@ -152,12 +160,14 @@ handle_cast(_Request, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
+%% @doc No other signals to answer.
 %% @private
 %% @since 0.0.0
 handle_info(_Info, State) ->
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
 
+%% @doc On termination, close the sockets.
 %% @private
 %% @since 0.0.0
 terminate(_Reason, {_Module, tcp, LSocket}) ->
@@ -166,15 +176,17 @@ terminate(_Reason, {_Module, tcp, LSocket}) ->
     ok;
 terminate(_Reason, {_Module, udp, Socket}) ->
     %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, udp, Socket}]),
-    gen_udp:close(Socket),
+    gen_udp:close(Socket), % Close the socket, we are done
     ok.
 
+%% @doc Err... &lt;sarcasm&gt;code changes ?&lt;/sarcasm&gt;
 %% @private
 %% @since 0.0.0
 code_change(_OldVsn, State, _Extra) ->
     %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
 
+%% @doc Helper function to create an atom with the name of an udp worker.
 %% @private
 %% @since 0.0.0
 udpWorkerName(Module) ->
