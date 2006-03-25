@@ -1,32 +1,8 @@
 Serlvers
 ========
 
-Introduction
-------------
-
 Serlvers is a set of Erlang modules designed to help in the implementation of IP services (that is TCP/IP or Internet servers).
 
-A set of behaviours would abstract the internals of each protocol and other modules help with the infrastructure.
+For more information either see doc/overview.edoc or run scons doc (hints: you'll need SCons and SConsErlang) and then see doc/index.html.
 
-The goal is that when making a server you would only worry about how to store, handle, prosses, etc the information instead of the internals of each protocol (to save you for countless hours of RFC reading).
 
-At this stage only 4 protocols are supported and they are a bit useless:
-
-- Echo (RFC862)
-- Chargen (RFC864)
-- Daytime (RFC867)
-- Time (RFC868)
-
-but they are here for a purpose: To be an example and a prof of concep.
-
-They are examples of how a protocol is implemented but they are also examples of the quality I am aiming with Serlvers, on code quality, on code style and on documentation quality and extension.
-
-Requirements
-------------
-
-These are the requirements for using Serverls:
-
-- Erlang R10B7: Older versions are likely to work as well.
--- Stdlib 1.10: At least this version is required since behaviour_info/1 is used. This is part of Erlang.
-- SCons 0.96.1: Older versions might work. This is a build system, a replacement for make and autotools.
-- SConsErlang: This is a module for SCons to build Erlang projects.

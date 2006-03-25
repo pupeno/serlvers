@@ -36,4 +36,4 @@
 \.sconsign
 \.Serlvers.conf
 \.directory
-doc
+doc/*.html

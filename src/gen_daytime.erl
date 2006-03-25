@@ -37,6 +37,8 @@ behaviour_info(_) ->
 %% @doc Start an unnamed daytime server.
 %% @see start/4
 %% @see start_link/3
+%% @since 0.0.0
+%%
 start(Module, Args, Options) ->
     %io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).

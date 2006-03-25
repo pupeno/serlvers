@@ -1,0 +1,49 @@
+@author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
+@copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
+@title Serlvers
+@doc 
+<p>Serlvers is a set of Erlang modules designed to help in the implementation of IP services (that is TCP/IP or Internet servers).</p>
+
+== Contents ==
+
+<ol>
+  <li>{@section Introduction}</li>
+  <li>{@section Requirements}</li>
+  <li>{@section Installation}</li>
+</ol>
+
+
+== Introduction ==
+
+<p>Serlvers consists of a set of behaviours would abstract the internals of each protocol and other modules help with the infrastructure.</p>
+<p>The goal is that when making a server you would only worry about how to store, handle, prosses, etc the information instead of the internals of each protocol (to save you for countless hours of RFC reading).</p>
+<!-- TODO: put the lists inside the paragraphs and try to validate. -->
+<p>At this stage only 4 protocols are supported and they are a bit useless:</p>
+  <ul>
+    <!-- TODO: Make links to the RFC themselves -->
+    <li>Echo (RFC862)</li>
+    <li>Chargen (RFC864)</li>
+    <li>Daytime (RFC867)</li>
+    <li>Time (RFC868)</li>
+  </ul>
+<p>but they are here for a purpose: To be an example and a prof of concept.</p>
+<p>They are examples of how a protocol is implemented but they are also examples of the quality I am aiming with Serlvers, on code quality, on code style and on documentation quality and extension.</p>
+
+== Requirements ==
+
+<p>These are the requirements for using Serverls:</p>
+<!-- TODO: for the following list, the 'description' tag would be a better tag -->
+<ul>
+  <li>
+    Erlang R10B7: Older versions are likely to work as well.
+    <ul>
+      <li>Stdlib 1.10: At least this version is required since behaviour_info/1 is used. This is part of Erlang.</li>
+    </ul>
+  </li>
+  <li>SCons 0.96.1: Older versions might work. This is a build system, a replacement for make and autotools.</li>
+  <li>SConsErlang: This is a module for SCons to build Erlang projects.</li>
+</ul>
+
+== Installation ==
+
+<p>You need to find out where is your Erlang installation <!-- TODO: complete. -->.</p>
