@@ -26,5 +26,7 @@ Requirements
 
 These are the requirements for using Serverls:
 
-- Erlang: duh!... well I am not sure of what version, R10B7 works, but older versions are likely to work as well.
--- Stdlib 1.10: At least this version is required since behaviour_info/1 is used.
+- Erlang R10B7: Older versions are likely to work as well.
+-- Stdlib 1.10: At least this version is required since behaviour_info/1 is used. This is part of Erlang.
+- SCons 0.96.1: Older versions might work. This is a build system, a replacement for make and autotools.
+- SConsErlang: This is a module for SCons to build Erlang projects.
