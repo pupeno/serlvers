@@ -15,7 +15,7 @@
 
 -module(gen_time).
 -behaviour(gen_server).
--export([start/3, start/4, start_link/3, start_link/4]).
+-export([start/3, start/4, start_link/3, start_link/4, stop/1]).
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([behaviour_info/1]).
 
@@ -55,14 +55,14 @@ start_link(SupName, Module, Args, Options) ->
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Stop a named process.
-stop(Process) ->
-    gen_server:handle_cast(Process, stop).
+stop(Module) ->
+    gen_server:cast(Module, stop).
 
 %% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular time server gets called (same as this module implementing a particular gen_server).
 %% @private Only gen_server should call this function.
 init({Module, Args}) ->
     %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
-    process_flag(trap_exit, true),
+    process_flag(trap_exit, true), % To get terminate/2 called when exiting.
     {ok, ModState} = Module:init(Args),
     {ok, {Module, ModState}}.
 

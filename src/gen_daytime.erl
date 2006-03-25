@@ -63,8 +63,8 @@ start_link(SupName, Module, Args, Options) ->
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Stop a named process.
-stop(Process) ->
-    gen_server:handle_cast(Process, stop).
+stop(Module) ->
+    gen_server:cast(Module, stop).
 
 %% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular daytime server gets called (same as this module implementing a particular gen_server).
 %% @private Only gen_server should call this function.
