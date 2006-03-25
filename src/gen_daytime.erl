@@ -18,6 +18,8 @@
 %%  <li>terminate/2: Any clean up code should be here. The first parameter is the reason to terminate, the second is the state.</li>
 %% </ul>
 %% @see launcher.
+%% @since 0.0.0
+%% @version 0.0.0
 
 -module(gen_daytime).
 -behaviour(gen_server).

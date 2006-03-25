@@ -10,8 +10,7 @@
 
 %% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
 %% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
-%% @doc
-%% <p>Launcher launches tcp and udp serviceses based on the behaviours of Serlvers.</p>
+%% @doc <p>Launcher launches tcp and udp serviceses based on the behaviours of Serlvers.</p>
 %% @see gen_echo.
 %% @see gen_chargen.
 %% @see gen_daytime.
@@ -27,8 +26,7 @@
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([acceptor/2]).
 
-%% @doc
-%% <p>This function is the same as {@link start_link/4} except that starts an anonymous/unnamed process.</p>
+%% @doc <p>This function is the same as {@link start_link/4} except that starts an anonymous/unnamed process.</p>
 %% @since 0.0.0
 %% @spec (Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
