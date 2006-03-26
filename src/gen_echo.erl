@@ -11,6 +11,12 @@
 %% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
 %% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
 %% @doc The gen_echo behaviour is used to implement Echo servers according to <a href="http://www.ietf.org/rfc/rfc862.txt">RFC862</a>.
+%% <p>To make an echo server make a module implementing the behaviour gen_echo, that requires the following functions:</p>
+%% <ul>
+%%  <li>init/1: Initialization code. It gets the arguments passed to one of the start functions and it should return the state of the echo server.</li>
+%%  <li>echo/1: The main function. The first parameter is the data to echo, the second parameter is the state of the server. The result should be a tuple of two items, the first being the string that would be sent as echo, the second being the new state.</li>
+%%  <li>terminate/2: Any clean up code should be here. The first parameter is the reason to terminate, the second is the state.</li>
+%% </ul>
 %% @see launcher.
 
 -module(gen_echo).
@@ -20,44 +26,93 @@
 -export([behaviour_info/1]).
 
 %% @doc Function used by Erlang (compiler?) to ensure that a module implementing gen_server really is exporting the needed functions.
+%% @private Only Erlang itself should call this function.
+%% @since 0.0.0
 behaviour_info(callbacks) ->
     [{init,1}, {echo,2}, {terminate, 2}];
 behaviour_info(_) ->
     undefined.
 
 %% @doc Start an unamed echo server.
+%% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start/4
-%% @see start_link/3.
+%% @see start_link/3
+%% @since 0.0.0
+%% @spec (Module::atom(), Args::term(), Options) -> Result
+%%   Options = [Option]
+%%     Option = {debug, Dbgs} | {timeout, Time} | {spawn_opt, SOpts} 
+%%       Dbgs = [Dbg] 
+%%         Dbg = trace | log | statistics | {log_to_file, FileName} | {install, {Func, FuncState}} 
+%%       SOpts = [term()] 
+%%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start(Module, Args, Options) ->
     io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named echo server.
+%% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start/3
 %% @see start_link/4
+%% @since 0.0.0
+%% @spec (SupName, Module::atom(), Args::term(), Options) -> Result
+%%   SupName = {local, atom()} | {global, atom()}
+%%   Options = [Option]
+%%     Option = {debug, Dbgs} | {timeout, Time} | {spawn_opt, SOpts} 
+%%       Dbgs = [Dbg] 
+%%         Dbg = trace | log | statistics | {log_to_file, FileName} | {install, {Func, FuncState}} 
+%%       SOpts = [term()] 
+%%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start(SupName, Module, Args, Options) ->
     io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Start an unnamed echo server and link to it.
+%% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start_link/4
 %% @see start/3
+%% @since 0.0.0
+%% @spec (Module::atom(), Args::term(), Options) -> Result
+%%   Options = [Option]
+%%     Option = {debug, Dbgs} | {timeout, Time} | {spawn_opt, SOpts} 
+%%       Dbgs = [Dbg] 
+%%         Dbg = trace | log | statistics | {log_to_file, FileName} | {install, {Func, FuncState}} 
+%%       SOpts = [term()] 
+%%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start_link(Module, Args, Options) ->
     io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start_link(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named daytime echo and link to it.
+%% <p>The parameters are exactly the same as gen_server and most of them (like Options) are passed as is to gen_server.</p>
 %% @see start_link/3
 %% @see start/4
+%% @since 0.0.0
+%% @spec (SupName, Module::atom(), Args::term(), Options) -> Result
+%%   SupName = {local, atom()} | {global, atom()}
+%%   Options = [Option]
+%%     Option = {debug, Dbgs} | {timeout, Time} | {spawn_opt, SOpts} 
+%%       Dbgs = [Dbg] 
+%%         Dbg = trace | log | statistics | {log_to_file, FileName} | {install, {Func, FuncState}} 
+%%       SOpts = [term()] 
+%%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start_link(SupName, Module, Args, Options) ->
     io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Stop a named process.
+%% @see start/3
+%% @see start/4
+%% @see start_link/3
+%% @see start_link/4
+%% @since 0.0.0
+%% @spec (Name) -> ok
+%%   Name = atom() | {local, atom()} | {global, atom()}
 stop(Process) ->
     gen_server:handle_cast(Process, stop).
 
 %% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular echo server gets called (same as this module implementing a particular gen_server).
+%% @private Only gen_server should call this function.
+%% @since 0.0.0
 init({Module, Args}) ->
     io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
     process_flag(trap_exit, true),
@@ -65,12 +120,15 @@ init({Module, Args}) ->
     {ok, {Module, ModState}}.
 
 %% @doc The base module, gen_server may call this function. Currently there's nothing to be done here.
+%% @private Only gen_server should call this function.
+%% @since 0.0.0
 handle_call(_Request, _From, State) ->
     io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc This fuction is called by gen_server when a message is received. We only handle the stop message here. We ignore the rest.
 %% @private Only gen_server should call this function.
+%% @since 0.0.0
 handle_cast(stop, State) ->
     io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
@@ -80,6 +138,7 @@ handle_cast(_Request, State) ->
 
 %% @doc This function is called by gen_server when a message is received and here we call the echo function in the particular implementation to use the returned data as reply. This function handles both the TCP and UDP cases.
 %% @private Only gen_server should call this function.
+%% @since 0.0.0
 handle_info({udp, Socket, IP, InPortNo, Packet}, {Module, ModState}) -> % Handle UDP packages.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, Packet} , {Module, ModState}]),
     {Reply, NewModState} = Module:echo(Packet, ModState),               % Generate the reply.
@@ -100,14 +159,16 @@ handle_info(_Info, State) -> % Other cases.
     {noreply, State}.        % Just ignore them.
 
 %% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a echo server.
-%% @private Only gen_server should call this function.  
+%% @private Only gen_server should call this function.
+%% @since 0.0.0
 terminate(Reason, {Module, ModState}) ->
     io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
     ok = Module:terminate(Reason, ModState),
     ok.
 
-%% @doc Err... code changes ?
+%% @doc Err... &lt;sarcasm&gt;code changes ?&lt;/sarcasm&gt;
 %% @private I think no one is interested in this function, yet.
+%% @since 0.0.0
 code_change(_OldVsn, State, _Extra) ->
     io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.

@@ -14,7 +14,7 @@
 %% <p>To make a daytime server make a module implementing the behaviour gen_daytime, that requires the following functions:</p>
 %% <ul>
 %%  <li>init/1: Initialization code. It gets the arguments passed to one of the start functions and it should return the state of the daytime server.</li>
-%%  <li>daytime/1: The main function. The parameter is the state of the server. The result should be a tuple of two items, the first being the string that would be sent as daytime, the second being the state.</li>
+%%  <li>daytime/1: The main function. The parameter is the state of the server. The result should be a tuple of two items, the first being the string that would be sent as daytime, the second being the new state.</li>
 %%  <li>terminate/2: Any clean up code should be here. The first parameter is the reason to terminate, the second is the state.</li>
 %% </ul>
 %% @see launcher.
