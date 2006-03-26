@@ -47,7 +47,7 @@ behaviour_info(_) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start(Module, Args, Options) ->
-    io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
+    %io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named daytime server.
@@ -64,7 +64,7 @@ start(Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start(SupName, Module, Args, Options) ->
-    io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
+    %io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Start an unnamed daytime server and link to it.
@@ -80,7 +80,7 @@ start(SupName, Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start_link(Module, Args, Options) ->
-    io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
+    %io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start_link(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named daytime server and link to it.
@@ -97,7 +97,7 @@ start_link(Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start_link(SupName, Module, Args, Options) ->
-    io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
+    %io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Stop a named process.
@@ -109,14 +109,14 @@ start_link(SupName, Module, Args, Options) ->
 %% @spec (Name) -> ok
 %%   Name = atom() | {local, atom()} | {global, atom()}
 stop(Module) ->
-    io:fwrite("~w:stop(~w)~n", [?MODULE, Module]),
+    %io:fwrite("~w:stop(~w)~n", [?MODULE, Module]),
     gen_server:cast(Module, stop).
 
 %% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular daytime server gets called (same as this module implementing a particular gen_server).
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 init({Module, Args}) ->
-    io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
+    %io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
     process_flag(trap_exit, true),
     {ok, ModState} = Module:init(Args),
     {ok, {Module, ModState}}.
@@ -125,42 +125,42 @@ init({Module, Args}) ->
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_call(_Request, _From, State) ->
-    io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
+    %io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc This fuction is called by gen_server when a message is received. We handle two types of messages, a stop that stops the daytime server and a connected that triggers the functionallity of the daytime server by calling the function daytime/1 (in the case of TCP).
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_cast(stop, State) ->
-    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
+    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
 handle_cast({connected, Socket}, {Module, ModState}) ->
-    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
+    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
     {Reply, NewModState} = Module:daytime(ModState),
     gen_tcp:send(Socket, Reply),
     {stop, normal, {Module, NewModState}};
 handle_cast(_Request, State) ->
-    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
+    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
 %% @doc This function is called by gen_server and is used to handle the UDP case by calling daytime/1.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
-    io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
+    %io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
     {Reply, NewModState} = Module:daytime(ModState), % Generate the reply.
     gen_udp:send(Socket, IP, InPortNo, Reply),       % Send the reply.
     ok = inet:setopts(Socket, [{active, once}]),     % Enable receiving of packages, get the next one.
     {noreply, {Module, NewModState}};
 handle_info(_Info, State) ->
-    io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
+    %io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
 
 %% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a daytime server.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 terminate(Reason, {Module, ModState}) ->
-    io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
+    %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
     ok = Module:terminate(Reason, ModState),
     ok.
 
@@ -168,5 +168,5 @@ terminate(Reason, {Module, ModState}) ->
 %% @private I think no one is interested in this function, yet.
 %% @since 0.0.0
 code_change(_OldVsn, State, _Extra) ->
-    io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
+    %io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
