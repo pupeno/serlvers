@@ -20,7 +20,7 @@
 -export([behaviour_info/1]).
 
 behaviour_info(callbacks) ->
-    [{init, 1}, {chargen, 1}, {terminate, 2}];
+    [{init, 1}, {chargen, 2}, {terminate, 2}];
 behaviour_info(_) ->
     undefined.
 
@@ -41,7 +41,6 @@ start_link(SupName, Module, Args, Options) ->
     %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
-%% Callbacks.
 init({Module, Args}) ->
     %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
     process_flag(trap_exit, true),
@@ -56,19 +55,18 @@ handle_cast(stop, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
 handle_cast({connected, Socket}, {Module, ModState}) ->
-    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
-    {Reply, NewModState} = Module:chargen(ModState),
-    gen_tcp:send(Socket, Reply),
+    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
+    NewModState = send_data(Socket, Module, ModState),
     {stop, normal, {Module, NewModState}};
 handle_cast(_Request, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
 handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
-    %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
-    {Reply, NewModState} = Module:chargen(ModState), % Generate the reply.
-    gen_udp:send(Socket, IP, InPortNo, Reply),       % Send the reply.
-    ok = inet:setopts(Socket, [{active, once}]),     % Enable receiving of packages, get the next one.
+    io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
+    {Reply, NewModState} = Module:chargen(udp, ModState), % Generate the reply.
+    gen_udp:send(Socket, IP, InPortNo, Reply),            % Send the reply.
+    ok = inet:setopts(Socket, [{active, once}]),          % Enable receiving of packages, get the next one.
     {noreply, {Module, NewModState}};
 handle_info(_Info, State) ->
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
@@ -82,3 +80,13 @@ terminate(Reason, {Module, ModState}) ->
 code_change(_OldVsn, State, _Extra) ->
     %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
+
+send_data(Socket, Module, ModState) ->
+    {Reply, NewModState} = Module:chargen(tcp, ModState),
+    Ok = gen_tcp:send(Socket, Reply),
+    case Ok of
+        ok ->
+            send_data(Socket, Module, NewModState);
+        _ ->
+            NewModState
+    end.
