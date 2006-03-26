@@ -86,7 +86,7 @@ start_link(SupName, Module, Transport, Port) ->
 %% @see start_link/4
 %% @since 0.0.0
 %% @spec (Name) -> ok
-%%        Name = atom() | {local, atom()} | {global, atom()}
+%%   Name = atom() | {local, atom()} | {global, atom()}
 stop({_Scope, Name}) ->
     %%io:fwrite("~w:stop(~w)~n", [?MODULE, {_Scope, Name}]),
     gen_server:cast(Name, stop);

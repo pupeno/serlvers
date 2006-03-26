@@ -19,13 +19,13 @@
 <p>The goal is that when making a server you would only worry about how to store, handle, prosses, etc the information instead of the internals of each protocol (to save you for countless hours of RFC reading).</p>
 <!-- TODO: put the lists inside the paragraphs and try to validate. -->
 <p>At this stage only 4 protocols are supported and they are a bit useless:</p>
-  <ul>
-    <!-- TODO: Make links to the RFC themselves -->
-    <li>Echo (RFC862)</li>
-    <li>Chargen (RFC864)</li>
-    <li>Daytime (RFC867)</li>
-    <li>Time (RFC868)</li>
-  </ul>
+<ul>
+  <!-- TODO: Make links to the RFC themselves -->
+  <li>Echo (RFC862)</li>
+  <li>Chargen (RFC864)</li>
+  <li>Daytime (RFC867)</li>
+  <li>Time (RFC868)</li>
+</ul>
 <p>but they are here for a purpose: To be an example and a prof of concept.</p>
 <p>They are examples of how a protocol is implemented but they are also examples of the quality I am aiming with Serlvers, on code quality, on code style and on documentation quality and extension.</p>
 
@@ -48,9 +48,9 @@
 
 <p>The first step is to be sure to have everything that is listed on {@section Requirements} installed.</p>
 <p>You need to find out where is your Erlang installation, this may be <tt>/usr/local/lib/erlang</tt>, <tt>/usr/lib/erlang</tt>, or a similar directory. As a reference, in there you may find: bin, erts-5.4.13, lib, misc, releases, usr, etc. That would be the erlang prefix.</p>
-<p>Once you found it, run:
+<p>Once you found it, run:</p>
 <pre>scons PREFIX=/erlang/prefix</pre>
-where <tt>/erlang/prefix</tt> is the prefix you've discovered earlier. That will set the PREFIX variable (you don't have to set it anymore for this tree unless you delete the file <tt>.Serlvers.conf</tt> and then it will compile.</p>
-<p>Then all you have to do is install:
+<p>where <tt>/erlang/prefix</tt> is the prefix you've discovered earlier. That will set the PREFIX variable (you don't have to set it anymore for this tree unless you delete the file <tt>.Serlvers.conf</tt> and then it will compile.</p>
+<p>Then all you have to do is install:</p>
 <pre>scons install</pre>
-where you may need to use <tt>su</tt> or <tt>sudo</tt> to gain superuser level.</p>
+<p>where you may need to use <tt>su</tt> or <tt>sudo</tt> to gain superuser level.</p>
