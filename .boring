@@ -36,4 +36,6 @@
 \.sconsign
 \.Serlvers.conf
 \.directory
-doc/*.html
+doc/edoc-info
+doc/.*\.html
+doc/.*\.css
