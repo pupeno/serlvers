@@ -19,12 +19,13 @@ opts.Save(configFile, env)
 # Help.
 Help(opts.GenerateHelpText(env))
 
-
 sources = ["src/launcher.erl",
            "src/gen_echo.erl",
            "src/gen_chargen.erl",
            "src/gen_daytime.erl",
            "src/gen_time.erl"]
+
+# Compile the sources to beams.
 beams = env.Erlang(sources)
 
 # Install directories.
