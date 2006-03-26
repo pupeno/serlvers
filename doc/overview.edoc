@@ -46,4 +46,11 @@
 
 == Installation ==
 
-<p>You need to find out where is your Erlang installation <!-- TODO: complete. -->.</p>
+<p>The first step is to be sure to have everything that is listed on {@section Requirements} installed.</p>
+<p>You need to find out where is your Erlang installation, this may be <tt>/usr/local/lib/erlang</tt>, <tt>/usr/lib/erlang</tt>, or a similar directory. As a reference, in there you may find: bin, erts-5.4.13, lib, misc, releases, usr, etc. That would be the erlang prefix.</p>
+<p>Once you found it, run:
+<pre>scons PREFIX=/erlang/prefix</pre>
+where <tt>/erlang/prefix</tt> is the prefix you've discovered earlier. That will set the PREFIX variable (you don't have to set it anymore for this tree unless you delete the file <tt>.Serlvers.conf</tt> and then it will compile.</p>
+<p>Then all you have to do is install:
+<pre>scons install</pre>
+where you may need to use <tt>su</tt> or <tt>sudo</tt> to gain superuser level.</p>
