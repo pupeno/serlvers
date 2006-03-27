@@ -24,7 +24,6 @@ behaviour_info(callbacks) ->
 behaviour_info(_) ->
     undefined.
 
-%% API
 start(Module, Args, Options) ->
     %%io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
@@ -55,7 +54,7 @@ handle_cast(stop, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
 handle_cast({connected, Socket}, {Module, ModState}) ->
-    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
     NewModState = send_data(Socket, Module, ModState),
     {stop, normal, {Module, NewModState}};
 handle_cast(_Request, State) ->
@@ -63,7 +62,7 @@ handle_cast(_Request, State) ->
     {noreply, State}.
 
 handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
-    io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
+    %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
     {Reply, NewModState} = Module:chargen(udp, ModState), % Generate the reply.
     gen_udp:send(Socket, IP, InPortNo, Reply),            % Send the reply.
     ok = inet:setopts(Socket, [{active, once}]),          % Enable receiving of packages, get the next one.
@@ -82,6 +81,7 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 send_data(Socket, Module, ModState) ->
+    %%io:fwrite("~w:send_data(~w, ~w, ~w)~n", [?MODULE, Socket, Module, ModState]),
     {Reply, NewModState} = Module:chargen(tcp, ModState),
     Ok = gen_tcp:send(Socket, Reply),
     case Ok of
