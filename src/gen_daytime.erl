@@ -108,9 +108,9 @@ start_link(SupName, Module, Args, Options) ->
 %% @since 0.0.0
 %% @spec (Name) -> ok
 %%   Name = atom() | {local, atom()} | {global, atom()}
-stop(Module) ->
-    %%io:fwrite("~w:stop(~w)~n", [?MODULE, Module]),
-    gen_server:cast(Module, stop).
+stop(Process) ->
+    %%io:fwrite("~w:stop(~w)~n", [?MODULE, Process]),
+    gen_server:cast(Process, stop).
 
 %% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular daytime server gets called (same as this module implementing a particular gen_server).
 %% @private Only gen_server should call this function.
