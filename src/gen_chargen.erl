@@ -134,17 +134,17 @@ handle_call(_Request, _From, State) ->
 handle_cast(stop, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
-handle_cast({connected, Socket}, {Module, ModState}) ->
-    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
-    NewModState = send_data(Socket, Module, ModState),
-    {stop, normal, {Module, NewModState}};
 handle_cast(_Request, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
-%% @doc This function is called by gen_server and is used to handle the UDP case by calling daytime/1.
+%% @doc This function is called by gen_server and is used to handle the UDP and TCP cases by calling chargen/2.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
+handle_info({connected, Socket}, {Module, ModState}) ->
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
+    NewModState = send_data(Socket, Module, ModState),
+    {stop, normal, {Module, NewModState}};
 handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
     {Reply, NewModState} = Module:chargen(udp, ModState), % Generate the reply.

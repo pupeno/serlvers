@@ -127,24 +127,24 @@ handle_call(_Request, _From, State) ->
     %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
-%% @doc This fuction is called by gen_server when a message is received. We handle two types of messages, a stop that stops the time server and a connected that triggers the functionallity of the time server by calling the function time/1 (in the case of TCP).
+%% @doc This function handles the stoping of a time server.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_cast(stop, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
-handle_cast({connected, Socket}, {Module, ModState}) ->
-    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
-    {Reply, NewModState} = Module:time(ModState),
-    gen_tcp:send(Socket, Reply),
-    {stop, normal, {Module, NewModState}};
 handle_cast(_Request, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
-%% @doc This function is called by gen_server and is used to handle the UDP case by calling time/1.
+%% @doc This function handles the udp and tcp case.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
+handle_info({connected, Socket}, {Module, ModState}) ->
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
+    {Reply, NewModState} = Module:time(ModState),
+    gen_tcp:send(Socket, Reply),
+    {stop, normal, {Module, NewModState}};
 handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
     {Reply, NewModState} = Module:time(ModState), % Generate the reply.
