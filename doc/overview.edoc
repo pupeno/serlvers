@@ -20,11 +20,10 @@
 <!-- TODO: put the lists inside the paragraphs and try to validate. -->
 <p>At this stage only 4 protocols are supported and they are a bit useless:</p>
 <ul>
-  <!-- TODO: Make links to the RFC themselves -->
-  <li>Echo (RFC862)</li>
-  <li>Chargen (RFC864)</li>
-  <li>Daytime (RFC867)</li>
-  <li>Time (RFC868)</li>
+  <li><a href="http://www.ietf.org/rfc/rfc862.txt">Echo (RFC862)</a></li>
+  <li><a href="http://www.ietf.org/rfc/rfc864.txt">Chargen (RFC864)</a></li>
+  <li><a href="http://www.ietf.org/rfc/rfc867.txt">Daytime (RFC867)</a></li>
+  <li><a href="http://www.ietf.org/rfc/rfc868.txt">Time (RFC868)</a></li>
 </ul>
 <p>but they are here for a purpose: To be an example and a prof of concept.</p>
 <p>They are examples of how a protocol is implemented but they are also examples of the quality I am aiming with Serlvers, on code quality, on code style and on documentation quality and extension.</p>
