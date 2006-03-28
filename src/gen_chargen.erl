@@ -11,10 +11,10 @@
 %% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
 %% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
 %% @doc The gen_chargen behaviour is used to implement Character Generator servers according to <a href="http://www.ietf.org/rfc/rfc864.txt">RFC864</a>.
-%% <p>To make a daytime server make a module implementing the behaviour gen_daytime, that requires the following functions:</p>
+%% <p>To make a chargen server make a module implementing the behaviour gen_chargen, that requires the following functions:</p>
 %% <ul>
-%%  <li>init/1: Initialization code. It gets the arguments passed to one of the start functions and it should return the state of the daytime server.</li>
-%%  <li>chargen/2: The main function.</li>
+%%  <li>init/1: Initialization code. It gets the arguments passed to one of the start functions and it should return the state of the chargen server.</li>
+%%  <li>chargen/2: The main function. The first parameter is the transport, either udp or tcp. This implies this Serlver is not well abstracted but this is because it is a simple solution and the RFC speceficies two very different behaviours for tcp and udp. The second parameter is the state. This function should return a tuple with the characters and a new state.</li>
 %%  <li>terminate/2: Any clean up code should be here. The first parameter is the reason to terminate, the second is the state.</li>
 %% </ul>
 %% @see launcher.
