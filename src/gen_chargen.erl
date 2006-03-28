@@ -34,7 +34,7 @@ behaviour_info(callbacks) ->
 behaviour_info(_) ->
     undefined.
 
-%% @doc Start an unnamed daytime server.
+%% @doc Start an unnamed chargen server.
 %% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start/4
 %% @see start_link/3
@@ -50,7 +50,7 @@ start(Module, Args, Options) ->
     %%io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
 
-%% @doc Start a named daytime server.
+%% @doc Start a named chargen server.
 %% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start/3
 %% @see start_link/4
@@ -67,7 +67,7 @@ start(SupName, Module, Args, Options) ->
     %%io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
-%% @doc Start an unnamed daytime server and link to it.
+%% @doc Start an unnamed chargen server and link to it.
 %% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start_link/4
 %% @see start/3
@@ -83,7 +83,7 @@ start_link(Module, Args, Options) ->
     %%io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start_link(?MODULE, {Module, Args}, Options).
 
-%% @doc Start a named daytime server and link to it.
+%% @doc Start a named chargen server and link to it.
 %% <p>The parameters are exactly the same as gen_server and most of them (like Options) are passed as is to gen_server.</p>
 %% @see start_link/3
 %% @see start/4
@@ -112,7 +112,7 @@ stop(Process) ->
     %%io:fwrite("~w:stop(~w)~n", [?MODULE, Process]),
     gen_server:cast(Process, stop).
 
-%% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular daytime server gets called (same as this module implementing a particular gen_server).
+%% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular chargen server gets called (same as this module implementing a particular gen_server).
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 init({Module, Args}) ->
@@ -128,7 +128,7 @@ handle_call(_Request, _From, State) ->
     %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
-%% @doc This fuction is called by gen_server when a message is received. We handle two types of messages, a stop that stops the daytime server and a connected that triggers the functionallity of the daytime server by calling the function daytime/1 (in the case of TCP).
+%% @doc Function only used to stop the server.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_cast(stop, State) ->
@@ -155,7 +155,7 @@ handle_info(_Info, State) ->
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
     
-%% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a daytime server.
+%% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a chargen server.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 terminate(Reason, {Module, ModState}) ->

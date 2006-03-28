@@ -128,7 +128,7 @@ handle_call(_Request, _From, State) ->
     %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
-%% @doc This fuction is called by gen_server when a message is received. We handle two types of messages, a stop that stops the daytime server and a connected that triggers the functionallity of the daytime server by calling the function daytime/1 (in the case of TCP).
+%% @doc This function handles stoping the daytime server.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_cast(stop, State) ->
