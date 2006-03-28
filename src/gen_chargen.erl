@@ -22,7 +22,7 @@
 
 -module(gen_chargen).
 -behaviour(gen_server).
--export([start/3, start/4, start_link/3, start_link/4]).
+-export([start/3, start/4, start_link/3, start_link/4, stop/1]).
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([behaviour_info/1]).
 
