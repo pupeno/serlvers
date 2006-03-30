@@ -30,7 +30,7 @@
 %% @private Only Erlang itself should call this function.
 %% @since 0.0.0
 behaviour_info(callbacks) ->
-    [{init, 1}, {chargen, 2}, {terminate, 2}];
+    [{init, 1}, {chargen, 1}, {terminate, 2}];
 behaviour_info(_) ->
     undefined.
 
@@ -143,14 +143,15 @@ handle_cast(_Request, State) ->
 %% @since 0.0.0
 handle_info({connected, Socket}, {Module, ModState}) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
-    NewModState = send_data(Socket, Module, ModState),
+    NewModState = send_data(tcp, Socket, Module, ModState),
     {stop, normal, {Module, NewModState}};
 handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
-    {Reply, NewModState} = Module:chargen(udp, ModState), % Generate the reply.
-    gen_udp:send(Socket, IP, InPortNo, Reply),            % Send the reply.
-    ok = inet:setopts(Socket, [{active, once}]),          % Enable receiving of packages, get the next one.
-    {noreply, {Module, NewModState}};
+    {I1,I2,I3} = erlang:now(),
+    random:seed(I1,I2,I3),
+    DatagramLength = random:uniform(513) - 1,
+    NewModState = send_data(udp, Socket, IP, InPortNo, DatagramLength, Module, ModState),
+    {stop, normal, {Module, NewModState}};
 handle_info(_Info, State) ->
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
@@ -173,13 +174,29 @@ code_change(_OldVsn, State, _Extra) ->
 %% @doc Send data repetitively in the TCP case.
 %% @private Internal helper function.
 %% @since 0.0.0
-send_data(Socket, Module, ModState) ->
-    %%io:fwrite("~w:send_data(~w, ~w, ~w)~n", [?MODULE, Socket, Module, ModState]),
-    {Reply, NewModState} = Module:chargen(tcp, ModState),
+send_data(tcp, Socket, Module, ModState) ->
+    %%io:fwrite("~w:send_data(tcp, ~w, ~w, ~w)~n", [?MODULE, Socket, Module, ModState]),
+    {Reply, NewModState} = Module:chargen(ModState),
     Ok = gen_tcp:send(Socket, Reply),
     case Ok of
         ok ->
-            send_data(Socket, Module, NewModState);
+            send_data(tcp, Socket, Module, NewModState);
         _ ->
+            NewModState
+    end.
+send_data(udp, _Socket, _IP, _InPortNo, 0, _Module, ModState) ->
+    %%io:fwrite("~w:send_data(udp, ~w, ~w, ~w, 0, ~w, ~w)~n", [?MODULE, _Socket, _IP, _InPortNo, _Module, ModState]),
+    ModState;
+send_data(udp, Socket, IP, InPortNo, DatagramLength, Module, ModState) ->
+    %%io:fwrite("~w:send_data(udp, ~w, ~w, ~w, ~w, ~w, ~w)~n", [?MODULE, Socket, IP, InPortNo, DatagramLength, Module, ModState]),
+    {Reply, NewModState} = Module:chargen(ModState),                          % Generate the reply.
+    gen_udp:send(Socket, IP, InPortNo, lists:sublist(Reply, DatagramLength)), % Send it.
+    if 
+        DatagramLength > length(Reply) ->                                     % We should continue sending data.
+            send_data(udp, Socket, IP, InPortNo,                              % Send it.
+                      DatagramLength - length(Reply), 
+                      Module, NewModState);
+        DatagramLength =< length(Reply) ->               % We are done.
+            ok = inet:setopts(Socket, [{active, once}]), % Enable receiving of packages, get the next one.
             NewModState
     end.
