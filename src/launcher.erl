@@ -38,7 +38,7 @@
 %% @spec (Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start(Module, Transport, Port) ->
-    %io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
+    %%io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Transport, Port]),
     gen_server:start(?MODULE, {Module, Transport, Port}, []).
 
 %% @doc Launch a named serlver.
@@ -50,7 +50,7 @@ start(Module, Transport, Port) ->
 %%   Name = {local, atom()} | {global, atom()}
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start(SupName, Module, Transport, Port) ->
-    %io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
+    %%io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Port]),
     gen_server:start(SupName, ?MODULE, {Module, Transport, Port}, []).
 
 %% @doc Launch an unamed serlver and link to it.
@@ -61,7 +61,7 @@ start(SupName, Module, Transport, Port) ->
 %% @spec (Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start_link(Module, Transport, Port) ->
-    io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Transport, Port]),
+    %%io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Transport, Port]),
     gen_server:start_link(?MODULE, {Module, Transport, Port}, []).
 
 %% @doc Launch a named serlver and link to it.
@@ -75,7 +75,7 @@ start_link(Module, Transport, Port) ->
 %%   Name = {local, atom()} | {global, atom()}
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start_link(SupName, Module, Transport, Port) ->
-    io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Port]),
+    %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Port]),
     gen_server:start_link(SupName, ?MODULE, {Module, Transport, Port}, []).
 
 %% @doc Stops a running process identified by Name.
@@ -88,10 +88,10 @@ start_link(SupName, Module, Transport, Port) ->
 %% @spec (Name) -> ok
 %%   Name = atom() | {local, atom()} | {global, atom()}
 stop({_Scope, Name}) ->
-    io:fwrite("~w:stop(~w)~n", [?MODULE, {_Scope, Name}]),
+    %%io:fwrite("~w:stop(~w)~n", [?MODULE, {_Scope, Name}]),
     gen_server:cast(Name, stop);
 stop(Name) ->
-    io:fwrite("~w:stop(~w)~n", [?MODULE, Name]),
+    %%io:fwrite("~w:stop(~w)~n", [?MODULE, Name]),
     gen_server:cast(Name, stop).
 
 %% @doc The follwing function is in charge of accepting new TCP connections.
@@ -99,7 +99,7 @@ stop(Name) ->
 %% @private Only called from {@link init}.
 %% @since 0.0.0
 acceptor(tcp, Module, LSocket) ->
-    io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, tcp, Module, LSocket]),
+    %%io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, tcp, Module, LSocket]),
     case gen_tcp:accept(LSocket) of                                % Wait for an incomming connection.
         {ok, Socket} ->                                            % Got a succesfull incomming connection.
             case Module:start() of                                 % Try to run a worker.
@@ -114,7 +114,7 @@ acceptor(tcp, Module, LSocket) ->
 	    {stop, {Module, LSocket, Reason}}                      % Try to return, hopefully, enough information to found out what the error was.
     end;
 acceptor(udp, Module, LSocket) ->
-    io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, ucp, Module, LSocket]),
+    %%io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, udp, Module, LSocket]),
     receive
         {udp, Socket, IP, InPortNo, Packet} ->
             {ok, Pid} = Module:start(),
@@ -129,7 +129,7 @@ acceptor(udp, Module, LSocket) ->
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 init({Module, tcp, Port}) ->
-    io:fwrite("~w:init(~w)~n", [?MODULE, {Module, tcp, Port}]),
+    %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, tcp, Port}]),
     process_flag(trap_exit, true),
     case gen_tcp:listen(Port, [{active, once}]) of            % Try to open the port.
 	{ok, LSocket} ->                                      % Port opened.
@@ -139,7 +139,7 @@ init({Module, tcp, Port}) ->
 	    {stop, {Module, tcp, Port, Reason}}               % Try to return, hopefully, enough information to found out what the error was.
     end;
 init({Module, udp, Port}) ->
-    io:fwrite("~w:init(~w)~n", [?MODULE, {Module, udp, Port}]),
+    %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, udp, Port}]),
     process_flag(trap_exit, true),
     case gen_udp:open(Port, [{active, once}]) of                      % Try to open the udp port.
         {ok, LSocket} ->
@@ -155,42 +155,42 @@ init({Module, udp, Port}) ->
 %%                     {stop, {Module, udp, Socket, Error}}              % Try to return, hopefully, enough information to found out what the error was.
 %%             end;
         {error, Reason} ->                                            % Error opening port.
-	    {stop, {Module, ucp, Port, Reason}}                       % Try to return, hopefully, enough information to found out what the error was.
+	    {stop, {Module, udp, Port, Reason}}                       % Try to return, hopefully, enough information to found out what the error was.
     end.                
 
 %% @doc No calls to answer.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_call(_Request, _From, State) ->
-    io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
+    %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc The only cast to answer is to stop.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_cast(stop, State) ->
-    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
 handle_cast(_Request, State) ->
-    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
 %% @doc No other signals to answer.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 handle_info(_Info, State) ->
-    io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
+    %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
 
 %% @doc On termination, close the sockets.
 %% @private Only gen_server should call this function.
 %% @since 0.0.0
 terminate(_Reason, {_Module, tcp, LSocket}) ->
-    io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, tcp, LSocket}]),
+    %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, tcp, LSocket}]),
     gen_tcp:close(LSocket), % Close the socket, we are done.
     ok;
 terminate(_Reason, {_Module, udp, Socket}) ->
-    io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, udp, Socket}]),
+    %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, udp, Socket}]),
     gen_udp:close(Socket), % Close the socket, we are done
     ok.
 
@@ -198,11 +198,5 @@ terminate(_Reason, {_Module, udp, Socket}) ->
 %% @private I think no one is interested in this function, yet.
 %% @since 0.0.0
 code_change(_OldVsn, State, _Extra) ->
-    io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
+    %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
-
-%% doc Helper function to create an atom with the name of an udp worker.
-%% private Internal helper function.
-%% since 0.0.0
-%udpWorkerName(Module) ->
-%    list_to_atom(string:concat(atom_to_list(Module), "_udp_worker")).
