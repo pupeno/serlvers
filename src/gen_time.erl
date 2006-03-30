@@ -150,7 +150,7 @@ handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handl
     {Reply, NewModState} = Module:time(ModState), % Generate the reply.
     gen_udp:send(Socket, IP, InPortNo, Reply),       % Send the reply.
     ok = inet:setopts(Socket, [{active, once}]),     % Enable receiving of packages, get the next one.
-    {noreply, {Module, NewModState}};
+    {stop, normal, {Module, NewModState}};
 handle_info(_Info, State) ->
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
