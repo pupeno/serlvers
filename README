@@ -1,8 +1,90 @@
-Serlvers
-========
+Serlvers 0.0.0
+==============
 
 Serlvers is a set of Erlang modules designed to help in the implementation of IP services (that is TCP/IP or Internet servers).
 
-For more information either see doc/overview.edoc or run scons doc (hints: you'll need SCons and SConsErlang) and then see doc/index.html.
+Serlvers consists of a set of behaviours abstract the internals of each protocol and other modules help with the infrastructure.
 
+The goal is that when making a server you would only worry about how to store, handle, prosses, etc the information instead of the internals of each protocol (to save you for countless hours of RFC reading).
 
+At this stage only 4 protocols are supported:
+
+- `Echo (RFC862) <http://www.ietf.org/rfc/rfc862.txt>`__
+- `Chargen (RFC864) <http://www.ietf.org/rfc/rfc864.txt>`__
+- `Daytime (RFC867) <http://www.ietf.org/rfc/rfc867.txt>`__
+- `Time (RFC868) <http://www.ietf.org/rfc/rfc868.txt>`__
+
+They are a bit useless but they are here for a purpose: To be an example and a prof of concept.
+
+They are examples of how a protocol is implemented but they are also examples of the quality I am aiming with Serlvers, on code quality, on code style and on documentation quality and extension.
+
+An example of how Serlvers is used can be found on `Fanterlastic Four <http://pupeno.com/software/fanterlastic-four>`__.
+
+Getting
+-------
+
+You can find the lattest version of Serlvers on http://pupeno.com/software/serlvers
+
+Requirements
+------------
+
+Here I list what I use, but other versions, newer and older, may work. I am interested in knowing either case, working or not to try to fix them and/or list them:
+
+- `Python <http://python.org>`__ 2.4.2
+- `SCons <http://scons.org>`__ 0.96.1
+- `Erlang/OTP <http://erlang.org>`__ R10B-10
+
+Installation
+------------
+
+SCons is used to compile and install this package.
+
+First check out the variables you need to set by running::
+
+  scons --help
+
+You'll need to set PREFIX, the prefix directory (where Erlang is installed, it contains something like: bin erts-5.4.13 Install lib misc releases usr) and at the same time you set it, it'll compile.
+
+Then run::
+  
+  scons install
+
+to install. You might need sudo or su to reach superuser capabilities.
+
+For example::
+
+  $ scons PREFIX=/usr/lib/erlang
+  scons: Reading SConscript files ...
+  scons: done reading SConscript files.
+  scons: Building targets ...
+  erl -noshell -run edoc_run files '["src/launcher.erl","src/gen_echo.erl","src/gen_chargen.erl","src/gen_daytime.erl","src/gen_time.erl"]' '[{dir, "doc/"}]' -run init stop
+  erlc -o src/ src/gen_chargen.erl
+  erlc -o src/ src/gen_daytime.erl
+  erlc -o src/ src/gen_echo.erl
+  erlc -o src/ src/gen_time.erl
+  erlc -o src/ src/launcher.erl
+  scons: done building targets.
+  $ sudo scons install
+  scons: Reading SConscript files ...
+  scons: done reading SConscript files.
+  scons: Building targets ...
+  Install file: "src/gen_chargen.beam" as "/usr/lib/erlang/lib/serlvers-0.0.0/ebin/gen_chargen.beam"
+  Install file: "src/gen_daytime.beam" as "/usr/lib/erlang/lib/serlvers-0.0.0/ebin/gen_daytime.beam"
+  Install file: "src/launcher.beam" as "/usr/lib/erlang/lib/serlvers-0.0.0/ebin/launcher.beam"
+  Install file: "src/gen_chargen.erl" as "/usr/lib/erlang/lib/serlvers-0.0.0/src/gen_chargen.erl"
+  Install file: "src/gen_daytime.erl" as "/usr/lib/erlang/lib/serlvers-0.0.0/src/gen_daytime.erl"
+  Install file: "src/launcher.erl" as "/usr/lib/erlang/lib/serlvers-0.0.0/src/launcher.erl"
+  scons: done building targets.
+  $
+
+Development
+-----------
+
+You can download the development version that is updated to the minute. This version is unstable, it might not even work. To download it you have to use `Darcs <http://darcs.net>`__ and run::
+
+  darcs get http://software.pupeno.com/Serlvers
+
+Contact
+-------
+
+To contact the author go to http://pupeno.com/contact
