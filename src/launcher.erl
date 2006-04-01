@@ -100,19 +100,12 @@ stop(Name) ->
 %% @since 0.0.0
 acceptor(tcp, Module, LSocket) ->
     %%io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, tcp, Module, LSocket]),
-    case gen_tcp:accept(LSocket) of                                % Wait for an incomming connection.
-        {ok, Socket} ->                                            % Got a succesfull incomming connection.
-            case Module:start() of                                 % Try to run a worker.
-                {ok, Pid} ->                                       % Worker running.
-                    ok = gen_tcp:controlling_process(Socket, Pid), % Let the worker control this connection.
-                    Pid ! {connected, Socket},                     % Worker, wake up, you have to work (this is for the cases where upon connection, the worker has to do something, like daytime and time, unlike echo).
-                    acceptor(tcp, Module, LSocket);                % Accept the next connection.
-                {error, Error} ->                                  % Worker could not be run.
-                    {stop, {Module, LSocket, Error}}               % Try to return, hopefully, enough information to found out what the error was.
-            end;
-	{error, Reason} ->                                         % Error accepting connection.
-	    {stop, {Module, LSocket, Reason}}                      % Try to return, hopefully, enough information to found out what the error was.
-    end;
+    {ok, Socket} = gen_tcp:accept(LSocket),        % Wait for an incomming connection.
+    {ok, Pid} = Module:start() ,                    % Run a worker.
+    ok = gen_tcp:controlling_process(Socket, Pid), % Let the worker control this connection.
+    Pid ! {connected, Socket},                     % Worker, wake up, you have to work (this is for the cases where upon connection, the worker has to do something, like daytime and time, unlike echo).
+    acceptor(tcp, Module, LSocket);                % Accept the next connection.
+
 acceptor(udp, Module, LSocket) ->
     %%io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, udp, Module, LSocket]),
     receive
@@ -131,32 +124,16 @@ acceptor(udp, Module, LSocket) ->
 init({Module, tcp, Port}) ->
     %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, tcp, Port}]),
     process_flag(trap_exit, true),
-    case gen_tcp:listen(Port, [{active, once}]) of            % Try to open the port.
-	{ok, LSocket} ->                                      % Port opened.
-	    spawn_link(?MODULE, acceptor, [tcp, Module, LSocket]), % Launch the acceptor.
-	    {ok, {Module, tcp, LSocket}};                     % We are done.
-	{error, Reason} ->                                    % Error opening port.
-	    {stop, {Module, tcp, Port, Reason}}               % Try to return, hopefully, enough information to found out what the error was.
-    end;
+    {ok, LSocket} = gen_tcp:listen(Port, [{active, once}]), % Open the tcp port.
+    spawn_link(?MODULE, acceptor, [tcp, Module, LSocket]),  % Launch the acceptor.
+    {ok, {Module, tcp, LSocket}};                           % We are done.
 init({Module, udp, Port}) ->
     %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, udp, Port}]),
     process_flag(trap_exit, true),
-    case gen_udp:open(Port, [{active, once}]) of                      % Try to open the udp port.
-        {ok, LSocket} ->
-            Pid = spawn_link(?MODULE, acceptor, [udp, Module, LSocket]),
-            gen_udp:controlling_process(LSocket, Pid),
-            {ok, {Module, udp, LSocket}};
-%%         {ok, Socket} ->                                               % Port opened.
-%%             case Module:start_link({local, udpWorkerName(Module)}) of % Try to run a worker for this UDP port.
-%%                 {ok, Pid} ->                                          % Worker running.
-%%                     gen_udp:controlling_process(Socket, Pid),         % Give the UDP port to the worker.
-%%                     {ok, {Module, udp, Socket}};                      % Done.
-%%                 {error, Error} ->                                     % Worker could not be run.
-%%                     {stop, {Module, udp, Socket, Error}}              % Try to return, hopefully, enough information to found out what the error was.
-%%             end;
-        {error, Reason} ->                                            % Error opening port.
-	    {stop, {Module, udp, Port, Reason}}                       % Try to return, hopefully, enough information to found out what the error was.
-    end.                
+    {ok, LSocket} = gen_udp:open(Port, [{active, once}]),        % Open the udp port.
+    Pid = spawn_link(?MODULE, acceptor, [udp, Module, LSocket]), % Run the acceptor
+    gen_udp:controlling_process(LSocket, Pid),                   % and let it receive the (udp) messages.
+    {ok, {Module, udp, LSocket}}.                                % We are done.
 
 %% @doc No calls to answer.
 %% @private Only gen_server should call this function.
