@@ -80,9 +80,11 @@ For example::
 Development
 -----------
 
-You can download the development version that is updated to the minute. This version is unstable, it might not even work. To download it you have to use `Darcs <http://darcs.net>`__ and run::
+You can download the `development branch`_ that is updated to the minute. This version is unstable, it might not even work. To download it you have to use `Darcs <http://darcs.net>`__ and run::
 
   darcs get http://software.pupeno.com/Serlvers
+
+.. _`development branch`: http://software.pupeno.com/cgi-bin/darcs.cgi/Serlvers/?c=browse
 
 Contact
 -------
