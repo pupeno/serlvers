@@ -1,4 +1,4 @@
-Serlvers 0.0.0
+Serlvers 0.1.0
 ==============
 
 Serlvers is a set of Erlang modules designed to help in the implementation of IP services (that is TCP/IP or Internet servers).
@@ -68,12 +68,12 @@ For example::
   scons: Reading SConscript files ...
   scons: done reading SConscript files.
   scons: Building targets ...
-  Install file: "src/gen_chargen.beam" as "/usr/lib/erlang/lib/serlvers-0.0.0/ebin/gen_chargen.beam"
-  Install file: "src/gen_daytime.beam" as "/usr/lib/erlang/lib/serlvers-0.0.0/ebin/gen_daytime.beam"
-  Install file: "src/launcher.beam" as "/usr/lib/erlang/lib/serlvers-0.0.0/ebin/launcher.beam"
-  Install file: "src/gen_chargen.erl" as "/usr/lib/erlang/lib/serlvers-0.0.0/src/gen_chargen.erl"
-  Install file: "src/gen_daytime.erl" as "/usr/lib/erlang/lib/serlvers-0.0.0/src/gen_daytime.erl"
-  Install file: "src/launcher.erl" as "/usr/lib/erlang/lib/serlvers-0.0.0/src/launcher.erl"
+  Install file: "src/gen_chargen.beam" as "/usr/lib/erlang/lib/serlvers-0.1.0/ebin/gen_chargen.beam"
+  Install file: "src/gen_daytime.beam" as "/usr/lib/erlang/lib/serlvers-0.1.0/ebin/gen_daytime.beam"
+  Install file: "src/launcher.beam" as "/usr/lib/erlang/lib/serlvers-0.1.0/ebin/launcher.beam"
+  Install file: "src/gen_chargen.erl" as "/usr/lib/erlang/lib/serlvers-0.1.0/src/gen_chargen.erl"
+  Install file: "src/gen_daytime.erl" as "/usr/lib/erlang/lib/serlvers-0.1.0/src/gen_daytime.erl"
+  Install file: "src/launcher.erl" as "/usr/lib/erlang/lib/serlvers-0.1.0/src/launcher.erl"
   scons: done building targets.
   $
 

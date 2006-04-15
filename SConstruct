@@ -29,7 +29,7 @@ sources = ["src/launcher.erl",
 beams = env.Erlang(sources)
 
 # Install directories.
-installDir = "$PREFIX/lib/serlvers-0.0.0/"
+installDir = "$PREFIX/lib/serlvers-0.1.0/"
 
 # chicken.py, no build needed.
 env.Install(installDir + "ebin/", beams)

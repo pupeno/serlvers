@@ -20,7 +20,6 @@
 %% @see gen_daytime.
 %% @see gen_time.
 %% @since 0.0.0
-%% @version 0.0.0
 
 %% @type transport() = tcp | udp
 
