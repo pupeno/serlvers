@@ -30,8 +30,8 @@ Requirements
 
 Here I list what I use, but other versions, newer and older, may work. I am interested in knowing either case, working or not to try to fix them and/or list them:
 
-- `Python <http://python.org>`__ 2.4.2
 - `SCons <http://scons.org>`__ 0.96.1
+- `SCons Erlang <http://pupeno.com/software/scons-erlang>`__ 0.1.0
 - `Erlang/OTP <http://erlang.org>`__ R10B-10
 
 Installation
