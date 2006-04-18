@@ -34,6 +34,12 @@ Here I list what I use, but other versions, newer and older, may work. I am inte
 - `SCons Erlang <http://pupeno.com/software/scons-erlang>`__ 0.1.0
 - `Erlang/OTP <http://erlang.org>`__ R10B-10
 
+Documentation
+-------------
+
+When you download Serlvers you'll get the documentation as well (after compiling, on the doc/ directory) but it is also on-line on http://pupeno.com/software/serlvers/documentation/
+
+
 Installation
 ------------
 
