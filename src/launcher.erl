@@ -19,7 +19,7 @@
 %% @see gen_chargen.
 %% @see gen_daytime.
 %% @see gen_time.
-%% @since 0.0.0
+%% @since 0.1.0
 
 %% @type transport() = tcp | udp
 
@@ -33,7 +33,7 @@
 %% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start/4
 %% @see start_link/3
-%% @since 0.0.0
+%% @since 0.1.0
 %% @spec (Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start(Module, Transport, Port) ->
@@ -44,7 +44,7 @@ start(Module, Transport, Port) ->
 %% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start/3
 %% @see start_link/4
-%% @since 0.0.0
+%% @since 0.1.0
 %% @spec (Name, Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Name = {local, atom()} | {global, atom()}
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
@@ -56,7 +56,7 @@ start(SupName, Module, Transport, Port) ->
 %% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start_link/4
 %% @see start/3
-%% @since 0.0.0
+%% @since 0.1.0
 %% @spec (Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start_link(Module, Transport, Port) ->
@@ -69,7 +69,7 @@ start_link(Module, Transport, Port) ->
 %% <p>The Port port will be opened using Trasport (either tcp or udp) as the transport. Not all services can work with all transports.</p>
 %% @see start_link/3
 %% @see start/4
-%% @since 0.0.0
+%% @since 0.1.0
 %% @spec (Name, Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Name = {local, atom()} | {global, atom()}
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
@@ -83,7 +83,7 @@ start_link(SupName, Module, Transport, Port) ->
 %% @see start/4
 %% @see start_link/3
 %% @see start_link/4
-%% @since 0.0.0
+%% @since 0.1.0
 %% @spec (Name) -> ok
 %%   Name = atom() | {local, atom()} | {global, atom()}
 stop({_Scope, Name}) ->
@@ -96,7 +96,7 @@ stop(Name) ->
 %% @doc The follwing function is in charge of accepting new TCP connections.
 %% <p>It is <i>spawned</i> from {@link init} when called for a tcp server.</p>
 %% @private Only called from {@link init}.
-%% @since 0.0.0
+%% @since 0.1.0
 acceptor(tcp, Module, LSocket) ->
     %%io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, tcp, Module, LSocket]),
     {ok, Socket} = gen_tcp:accept(LSocket),        % Wait for an incomming connection.
@@ -119,7 +119,7 @@ acceptor(udp, Module, LSocket) ->
     
 %% @doc Called by gen_server to initialize the launcher.
 %% @private Only gen_server should call this function.
-%% @since 0.0.0
+%% @since 0.1.0
 init({Module, tcp, Port}) ->
     %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, tcp, Port}]),
     process_flag(trap_exit, true),
@@ -136,14 +136,14 @@ init({Module, udp, Port}) ->
 
 %% @doc No calls to answer.
 %% @private Only gen_server should call this function.
-%% @since 0.0.0
+%% @since 0.1.0
 handle_call(_Request, _From, State) ->
     %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc The only cast to answer is to stop.
 %% @private Only gen_server should call this function.
-%% @since 0.0.0
+%% @since 0.1.0
 handle_cast(stop, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
@@ -153,14 +153,14 @@ handle_cast(_Request, State) ->
 
 %% @doc No other signals to answer.
 %% @private Only gen_server should call this function.
-%% @since 0.0.0
+%% @since 0.1.0
 handle_info(_Info, State) ->
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
 
 %% @doc On termination, close the sockets.
 %% @private Only gen_server should call this function.
-%% @since 0.0.0
+%% @since 0.1.0
 terminate(_Reason, {_Module, tcp, LSocket}) ->
     %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, tcp, LSocket}]),
     gen_tcp:close(LSocket), % Close the socket, we are done.
@@ -172,7 +172,7 @@ terminate(_Reason, {_Module, udp, Socket}) ->
 
 %% @doc Err... &lt;sarcasm&gt;code changes ?&lt;/sarcasm&gt;
 %% @private I think no one is interested in this function, yet.
-%% @since 0.0.0
+%% @since 0.1.0
 code_change(_OldVsn, State, _Extra) ->
     %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.

@@ -18,7 +18,7 @@
 %%  <li>terminate/2: Any clean up code should be here. The first parameter is the reason to terminate, the second is the state.</li>
 %% </ul>
 %% @see launcher.
-%% @since 0.0.0
+%% @since 0.1.0
 
 -module(gen_time).
 -behaviour(gen_server).
@@ -28,7 +28,7 @@
 
 %% @doc Function used by Erlang (compiler?) to ensure that a module implementing gen_time really is exporting the needed functions.
 %% @private Only Erlang itself should call this function.
-%% @since 0.0.0
+%% @since 0.1.0
 behaviour_info(callbacks) ->
     [{init, 1}, {time, 1}, {terminate, 2}];
 behaviour_info(_) ->
@@ -38,7 +38,7 @@ behaviour_info(_) ->
 %% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start/4
 %% @see start_link/3
-%% @since 0.0.0
+%% @since 0.1.0
 %% @spec (Module::atom(), Args::term(), Options) -> Result
 %%   Options = [Option]
 %%     Option = {debug, Dbgs} | {timeout, Time} | {spawn_opt, SOpts} 
@@ -54,7 +54,7 @@ start(Module, Args, Options) ->
 %% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start/3
 %% @see start_link/4
-%% @since 0.0.0
+%% @since 0.1.0
 %% @spec (SupName, Module::atom(), Args::term(), Options) -> Result
 %%   SupName = {local, atom()} | {global, atom()}
 %%   Options = [Option]
@@ -71,7 +71,7 @@ start(SupName, Module, Args, Options) ->
 %% <p>See {@link start_link/4} for further explanation of the parameters.</p>
 %% @see start_link/4
 %% @see start/3
-%% @since 0.0.0
+%% @since 0.1.0
 %% @spec (Module::atom(), Args::term(), Options) -> Result
 %%   Options = [Option]
 %%     Option = {debug, Dbgs} | {timeout, Time} | {spawn_opt, SOpts} 
@@ -87,7 +87,7 @@ start_link(Module, Args, Options) ->
 %% <p>The parameters are exactly the same as gen_server and most of them (like Options) are passed as is to gen_server.</p>
 %% @see start_link/3
 %% @see start/4
-%% @since 0.0.0
+%% @since 0.1.0
 %% @spec (SupName, Module::atom(), Args::term(), Options) -> Result
 %%   SupName = {local, atom()} | {global, atom()}
 %%   Options = [Option]
@@ -105,7 +105,7 @@ start_link(SupName, Module, Args, Options) ->
 %% @see start/4
 %% @see start_link/3
 %% @see start_link/4
-%% @since 0.0.0
+%% @since 0.1.0
 %% @spec (Name) -> ok
 %%   Name = atom() | {local, atom()} | {global, atom()}
 stop(Module) ->
@@ -113,7 +113,7 @@ stop(Module) ->
 
 %% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular time server gets called (same as this module implementing a particular gen_server).
 %% @private Only gen_server should call this function.
-%% @since 0.0.0
+%% @since 0.1.0
 init({Module, Args}) ->
     %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
     process_flag(trap_exit, true), % To get terminate/2 called when exiting.
@@ -122,14 +122,14 @@ init({Module, Args}) ->
 
 %% @doc The base module, gen_server may call this function. Currently there's nothing to be done here.
 %% @private Only gen_server should call this function.
-%% @since 0.0.0
+%% @since 0.1.0
 handle_call(_Request, _From, State) ->
     %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc This function handles the stoping of a time server.
 %% @private Only gen_server should call this function.
-%% @since 0.0.0
+%% @since 0.1.0
 handle_cast(stop, State) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
@@ -139,7 +139,7 @@ handle_cast(_Request, State) ->
 
 %% @doc This function handles the udp and tcp case.
 %% @private Only gen_server should call this function.
-%% @since 0.0.0
+%% @since 0.1.0
 handle_info({connected, Socket}, {Module, ModState}) ->
     %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
     {Reply, NewModState} = Module:time(ModState),
@@ -157,7 +157,7 @@ handle_info(_Info, State) ->
 
 %% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a time server.
 %% @private Only gen_server should call this function.  
-%% @since 0.0.0  
+%% @since 0.1.0  
 terminate(Reason, {Module, ModState}) ->
     %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
     ok = Module:terminate(Reason, ModState),
@@ -165,7 +165,7 @@ terminate(Reason, {Module, ModState}) ->
 
 %% @doc Err... &lt;sarcasm&gt;code changes ?&lt;/sarcasm&gt;
 %% @private I think no one is interested in this function, yet.
-%% @since 0.0.0
+%% @since 0.1.0
 code_change(_OldVsn, State, _Extra) ->
     %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
