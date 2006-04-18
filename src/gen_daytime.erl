@@ -26,7 +26,7 @@
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([behaviour_info/1]).
 
-%% @doc Function used by Erlang (compiler?) to ensure that a module implementing gen_server really is exporting the needed functions.
+%% @doc Function used by Erlang (compiler?) to ensure that a module implementing gen_daytime really is exporting the needed functions.
 %% @private Only Erlang itself should call this function.
 %% @since 0.0.0
 behaviour_info(callbacks) ->
