@@ -110,11 +110,11 @@ acceptor(tcp, Module, LSocket) ->
     end;
 acceptor(udp, Module, LSocket) ->
     %%io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, udp, Module, LSocket]),
-    receive
-        {udp, Socket, IP, InPortNo, Packet} ->
-            {ok, Pid} = Module:start(),
-            Pid ! {udp, Socket, IP, InPortNo, Packet},
-            acceptor(udp, Module, LSocket);
+    receive                                            % Wait for a message.
+        {udp, Socket, IP, InPortNo, Packet} ->         % The message is an UDP packet. 
+            {ok, Pid} = Module:start(),                % Start the worker to do something with it.
+            Pid ! {udp, Socket, IP, InPortNo, Packet}, % Send the packet to the worker.
+            acceptor(udp, Module, LSocket);            % Wait for the next packet.
         _ ->
             acceptor(udp, Module, LSocket)   % TODO: do some logging ? we received an unexpectde message.
     
