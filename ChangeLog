@@ -1,0 +1,6 @@
+Serlvers 0.2
+- Flow control on launcher, not on each serlver.
+- DNS implemented (not finished yet).
+
+Serlvers 0.1
+- Initial release implementing echo, daytime, time and chargen.
