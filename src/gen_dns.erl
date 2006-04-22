@@ -357,14 +357,44 @@ tests_label_parsing() ->
 
 
 tests_question_parsing() ->
-    [?_assert({[?C_ALL_IN], <<>>} == parse_questions(1, ?C_ALL_INB)),
-     ?_assert({[?C_MX_CS], <<>>} == parse_questions(1, ?C_MX_CSB)),
-     ?_assert({[?PC_NS_CH], <<>>} == parse_questions(1, ?PC_NS_CHB)),
-     ?_assert({[?PC_SOA_HS], <<>>} == parse_questions(1, ?PC_SOA_HSB)),
-     ?_assert({[?SPC_A_ANY], <<>>} == parse_questions(1, ?SPC_A_ANYB)),
-     ?_assert({[?SPC_PTR_IN], <<>>} == parse_questions(1, ?SPC_PTR_INB))].
-     %%?_assert({[?C_MX_CS, ?PC_NS_CH], <<>>} == parse_questions(2, <<?C_MX_CSB/binary, ?PC_NS_CHB/binary>>)),
-     %%?_assert({[?PC_SOA_HS, ?SPC_A_ANY, ?SPC_PTR_IN], <<>>} == parse_questions(3, <<?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>))].
+    [{"One question",
+      [?_assert({[?C_ALL_IN], <<>>} == parse_questions(1, ?C_ALL_INB)),
+       ?_assert({[?C_MX_CS], <<>>} == parse_questions(1, ?C_MX_CSB)),
+       ?_assert({[?PC_NS_CH], <<>>} == parse_questions(1, ?PC_NS_CHB)),
+       ?_assert({[?PC_SOA_HS], <<>>} == parse_questions(1, ?PC_SOA_HSB)),
+       ?_assert({[?SPC_A_ANY], <<>>} == parse_questions(1, ?SPC_A_ANYB)),
+       ?_assert({[?SPC_PTR_IN], <<>>} == parse_questions(1, ?SPC_PTR_INB))]},
+     {"Two questions",
+      [?_assert({[?C_ALL_IN, ?C_MX_CS], <<>>} == 
+		parse_questions(2, <<?C_ALL_INB/binary, ?C_MX_CSB/binary>>)),
+       ?_assert({[?C_MX_CS, ?PC_NS_CH], <<>>} == 
+		parse_questions(2, <<?C_MX_CSB/binary, ?PC_NS_CHB/binary>>)),
+       ?_assert({[?PC_NS_CH, ?PC_SOA_HS], <<>>} == 
+		parse_questions(2, <<?PC_NS_CHB/binary, ?PC_SOA_HSB/binary>>)),
+       ?_assert({[?PC_SOA_HS, ?SPC_A_ANY], <<>>} == 
+		parse_questions(2, <<?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary>>)),
+       ?_assert({[?SPC_A_ANY, ?SPC_PTR_IN], <<>>} == 
+		parse_questions(2, <<?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>)),
+       ?_assert({[?SPC_PTR_IN, ?C_ALL_IN], <<>>} == 
+		parse_questions(2, <<?SPC_PTR_INB/binary, ?C_ALL_INB/binary>>))]},
+     {"Three questions",
+      [?_assert({[?C_ALL_IN, ?C_MX_CS, ?PC_NS_CH], <<>>} == 
+		parse_questions(3, <<?C_ALL_INB/binary, ?C_MX_CSB/binary, ?PC_NS_CHB/binary>>)),
+       ?_assert({[?C_MX_CS, ?PC_NS_CH, ?PC_SOA_HS], <<>>} == 
+		parse_questions(3, <<?C_MX_CSB/binary, ?PC_NS_CHB/binary, ?PC_SOA_HSB/binary>>)),
+       ?_assert({[?PC_NS_CH, ?PC_SOA_HS, ?SPC_A_ANY], <<>>} == 
+		parse_questions(3, <<?PC_NS_CHB/binary, ?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary>>)),
+       ?_assert({[?PC_SOA_HS, ?SPC_A_ANY, ?SPC_PTR_IN], <<>>} == 
+		parse_questions(3, <<?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>)),
+       ?_assert({[?SPC_A_ANY, ?SPC_PTR_IN, ?C_ALL_IN], <<>>} == 
+		parse_questions(3, <<?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary, ?C_ALL_INB/binary>>)),
+       ?_assert({[?SPC_PTR_IN, ?C_ALL_IN, ?C_MX_CS], <<>>} == 
+		parse_questions(3, <<?SPC_PTR_INB/binary, ?C_ALL_INB/binary, ?C_MX_CSB/binary>>))]},
+    {"Six questions",
+     ?_assert({[?C_ALL_IN, ?C_MX_CS, ?PC_NS_CH, ?PC_SOA_HS, ?SPC_A_ANY, ?SPC_PTR_IN], <<>>} == 
+	      parse_questions(6,
+			      <<?C_ALL_INB/binary, ?C_MX_CSB/binary, ?PC_NS_CHB/binary,
+			       ?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>))}].
 
 test() ->
     eunit:test(tests()).
