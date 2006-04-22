@@ -20,25 +20,25 @@
 
 -module(gen_dns).
 -behaviour(gen_server).
-%-export([start/3, start/4, start_link/3, start_link/4, stop/1]).
-%-export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
-%-export([behaviour_info/1]).
+-export([start/3, start/4, start_link/3, start_link/4, stop/1]).
+-export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([behaviour_info/1]).
 
 %% @doc Structure defining a DNS message. It is based on what is defined on RFC1035 <http://www.ietf.org/rfc/rfc1035.txt> but it has been re-arranged for easy of use and some fields than are not needed where removed (the counts, which can be calculated out of the length of the lists).
 %% @since 0.2
 -record(dns_message, {
-	  identifier, %% Assigned by the program that generates queries.  This identifier is copied to the corresponding reply and can be used by the requester to match up replies to outstanding queries.
-	  qr,         %% Whether this message is a query ('False'), or a response ('True').
-	  opcode,     %% Kind of query in this message.  This value is set by the originator of a query and copied into the response.
-	  aa,         %% The responding name server is an authority for the domain name in question section.
-	  tc,         %% Specifies that this message was truncated due to length greater than that permitted on the transmission channel.
-	  rd,         %% This may be set in a query and is copied into the response.  If RD is set, it directs the name server to pursue the query recursively.
-	  ra,         %% Is set or cleared in a response, and denotes whether recursive query support is available in the name server.
-	  rcode,      %% Type of the response.
-	  question,   %% The question for the name server.
-	  answer,     %% 'ResourceRecord's answering the question.
-	  authority,  %% 'ResourceRecord's pointing toward an authority.
-	  additional  %% 'ResourceRecord's holding additional information.
+	  id,        %% Assigned by the program that generates queries.  This identifier is copied to the corresponding reply and can be used by the requester to match up replies to outstanding queries.
+	  qr,        %% Whether this message is a query ('False'), or a response ('True').
+	  opcode,    %% Kind of query in this message.  This value is set by the originator of a query and copied into the response.
+	  aa,        %% The responding name server is an authority for the domain name in question section.
+	  tc,        %% Specifies that this message was truncated due to length greater than that permitted on the transmission channel.
+	  rd,        %% This may be set in a query and is copied into the response.  If RD is set, it directs the name server to pursue the query recursively.
+	  ra,        %% Is set or cleared in a response, and denotes whether recursive query support is available in the name server.
+	  rcode,     %% Type of the response.
+	  question,  %% The question for the name server.
+	  answer,    %% 'ResourceRecord's answering the question.
+	  authority, %% 'ResourceRecord's pointing toward an authority.
+	  additional %% 'ResourceRecord's holding additional information.
 	 }).
 
 
@@ -46,7 +46,8 @@
 %% @private Only Erlang itself should call this function.
 %% @since 0.2
 behaviour_info(callbacks) ->
-    [{init, 1}, {daytime, 1}, {terminate, 2}];
+    [{init, 1}, %%{daytime, 1}, 
+     {terminate, 2}];
 behaviour_info(_) ->
     undefined.
 
@@ -63,7 +64,7 @@ behaviour_info(_) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start(Module, Args, Options) ->
-    %%io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
+    io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named dns server.
@@ -80,7 +81,7 @@ start(Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start(SupName, Module, Args, Options) ->
-    %%io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
+    io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Start an unnamed dns server and link to it.
@@ -96,7 +97,7 @@ start(SupName, Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start_link(Module, Args, Options) ->
-    %%io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
+    io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start_link(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named dns server and link to it.
@@ -113,7 +114,7 @@ start_link(Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start_link(SupName, Module, Args, Options) ->
-    %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
+    io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Stop a named process.
@@ -125,14 +126,14 @@ start_link(SupName, Module, Args, Options) ->
 %% @spec (Name) -> ok
 %%   Name = atom() | {local, atom()} | {global, atom()}
 stop(Process) ->
-    %%io:fwrite("~w:stop(~w)~n", [?MODULE, Process]),
+    io:fwrite("~w:stop(~w)~n", [?MODULE, Process]),
     gen_server:cast(Process, stop).
 
 %% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular dns server gets called (same as this module implementing a particular gen_server).
 %% @private Only gen_server should call this function.
 %% @since 0.2
 init({Module, Args}) ->
-    %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
+    io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
     process_flag(trap_exit, true),
     {ok, ModState} = Module:init(Args),
     {ok, {Module, ModState}}.
@@ -141,42 +142,52 @@ init({Module, Args}) ->
 %% @private Only gen_server should call this function.
 %% @since 0.2
 handle_call(_Request, _From, State) ->
-    %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
+    io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc This function handles stoping the dns server.
 %% @private Only gen_server should call this function.
 %% @since 0.2
 handle_cast(stop, State) ->
-    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
+    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
 handle_cast(_Request, State) ->
-    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
+    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
 %% @doc This function handles the udp and tcp case of dns.
 %% @private Only gen_server should call this function.
 %% @since 0.2
 handle_info({connected, Socket}, {Module, ModState}) ->
-    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
-    {Reply, NewModState} = Module:dns(ModState),
-    gen_tcp:send(Socket, Reply),
-    {stop, normal, {Module, NewModState}};
-handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
-    %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
-    {Reply, NewModState} = Module:dns(ModState), % Generate the reply.
-    gen_udp:send(Socket, IP, InPortNo, Reply),       % Send the reply.
-    ok = inet:setopts(Socket, [{active, once}]),     % Enable receiving of packages, get the next one.
-    {stop, normal, {Module, NewModState}};
+    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {connected, Socket}, {Module, ModState}]),
+%    %%{Reply, NewModState} = Module:dns(ModState),
+%    %%gen_tcp:send(Socket, Reply),
+%    {stop, normal, {Module, NewModState}};
+    {noreply, {Module, ModState}};
+handle_info({udp, Socket, IP, InPortNo, Packet}, {Module, ModState}) -> % Handle UDP packages.
+    io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, Packet} , {Module, ModState}]),
+    %%{Reply, NewModState} = Module:dns(ModState), % Generate the reply.
+    %%gen_udp:send(Socket, IP, InPortNo, Reply),       % Send the reply.
+    %%ok = inet:setopts(Socket, [{active, once}]),     % Enable receiving of packages, get the next one.
+    Query = parse_dns_message(list_to_binary(Packet)),
+    gen_udp:send(Socket, IP, InPortNo, "caca"), 
+    io:fwrite("Query = ~w.~n", [Query]),
+    {stop, normal, {Module, ModState}};
+handle_info({tcp, Socket, Data}, {Module, ModState}) -> % Handle TCP queries.
+    io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {tcp, Socket, Data} , {Module, ModState}]),
+    Query = parse_dns_message(list_to_binary(Data)),
+    io:fwrite("Query = ~w.~n", [Query]),
+    gen_tcp:send(Socket, "caca"),
+    {stop, normal, {Module, ModState}};
 handle_info(_Info, State) ->
-    %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
-    {noreply, State}.
+    io:fwrite("~w:handle_info(~w, ~w)~nUnknow message.~n", [?MODULE, _Info, State]),
+    {noreply, normal, State}.
 
 %% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a dns server.
 %% @private Only gen_server should call this function.
 %% @since 0.2
 terminate(Reason, {Module, ModState}) ->
-    %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
+    io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
     ok = Module:terminate(Reason, ModState),
     ok.
 
@@ -184,5 +195,18 @@ terminate(Reason, {Module, ModState}) ->
 %% @private I think no one is interested in this function, yet.
 %% @since 0.2
 code_change(_OldVsn, State, _Extra) ->
-    %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
+    io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
+
+%% @doc Given a binary string representing a DNS message (the incomming from the network) return the same DNS message represented as records.
+%% @private Internal helper function.
+%% @since 0.2
+parse_dns_message(RawMsg) ->
+    io:fwrite("~w:parse_dns_message(~w)~n", [?MODULE, RawMsg]),
+    <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4,
+     QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
+    Msg = #dns_message{id = ID, qr = QR, opcode = Opcode, aa = AA, tc = TC, rd = RD, ra = RA, rcode = RCODE},
+    io:fwrite("QDCOUNT = ~w, ANCOUNT = ~w, NSCOUNT = ~w, ARCOUNT = ~w, Body = ~w~n", [QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT, Body]),
+    io:fwrite("DNS Message = ~w.~n", [Msg]),
+    ok.
+    
