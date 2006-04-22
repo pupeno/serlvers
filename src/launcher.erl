@@ -168,11 +168,11 @@ handle_info(_Info, State) ->
 %% @since 0.1.0
 terminate(_Reason, {_Module, tcp, LSocket}) ->
     %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, tcp, LSocket}]),
-    gen_tcp:close(LSocket), % Close the socket, we are done.
+    ok = gen_tcp:close(LSocket), % Close the socket, we are done.
     ok;
 terminate(_Reason, {_Module, udp, Socket}) ->
     %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, udp, Socket}]),
-    gen_udp:close(Socket), % Close the socket, we are done
+    ok = gen_udp:close(Socket), % Close the socket, we are done
     ok.
 
 %% @doc Err... &lt;sarcasm&gt;code changes ?&lt;/sarcasm&gt;
