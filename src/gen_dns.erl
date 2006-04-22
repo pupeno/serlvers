@@ -327,20 +327,21 @@ tests() ->
     [{"Label parsing", tests_label_parsing()},
      {"Question parsing", tests_question_parsing()}].
 
-tests_label_parsing() ->
-    [{"com", ?_assert({["com"], <<>>} == parse_label(<<3, "com", 0>>))},
-     {"pupeno.com", ?_assert({["pupeno", "com"], <<>>} == parse_label(<<6, "pupeno", 3, "com", 0>>))},
-     {"software.pupeno.com", ?_assert({["software", "pupeno", "com"], <<>>} == parse_label(<<8, "software", 6, "pupeno", 3, "com", 0>>))},
-     {"com + extra", ?_assert({["com"], <<"trailing trash">>} == parse_label(<<3, "com", 0, "trailing trash">>))},
-     {"pupeno.com + extra", ?_assert({["pupeno", "com"], <<"whatever">>} == parse_label(<<6, "pupeno", 3, "com", 0, "whatever">>))},
-     {"software.pupeno.com + extra", ?_assert({["software", "pupeno", "com"], <<"who cares ?">>} == parse_label(<<8, "software", 6, "pupeno", 3, "com", 0, "who cares ?">>))}].
-
 -define(C, ["com"]).
 -define(CB, <<3, "com">>).
 -define(PC, ["pupeno"|?C]).
 -define(PCB, <<6, "pupeno", ?CB/binary>>).
 -define(SPC, ["software"|?PC]).
 -define(SPCB, <<8, "software", ?PCB/binary>>).
+
+tests_label_parsing() ->
+    [{"com", ?_assert({?C, <<>>} == parse_label(<<?CB/binary, 0>>))},
+     {"pupeno.com", ?_assert({?PC, <<>>} == parse_label(<<?PCB/binary, 0>>))},
+     {"software.pupeno.com", ?_assert({?SPC, <<>>} == parse_label(<<?SPCB/binary, 0>>))},
+     {"com+", ?_assert({?C, <<"trailing trash">>} == parse_label(<<?CB/binary, 0, "trailing trash">>))},
+     {"pupeno.com+", ?_assert({?PC, <<"whatever">>} == parse_label(<<?PCB/binary, 0, "whatever">>))},
+     {"software.pupeno.com+", ?_assert({?SPC, <<"who cares ?">>} == parse_label(<<?SPCB/binary, 0, "who cares ?">>))}].
+
 -define(C_ALL_IN, #question{qname = ?C, qtype = all, qclass = in}).
 -define(C_ALL_INB, <<?CB/binary, 0, 255:16, 1:16>>).
 -define(C_MX_CS, #question{qname = ?C, qtype = mx, qclass = cs}).
