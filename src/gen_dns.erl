@@ -24,6 +24,13 @@
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([behaviour_info/1]).
 
+-export([test/0, tests/0]).
+
+-compile(export_all).
+
+-include_lib("eunit/include/eunit.hrl").
+%%-include_lib("eunit/include/eunit_test.hrl").
+
 %% @doc Structure defining a DNS message. It is based on what is defined on RFC1035 <http://www.ietf.org/rfc/rfc1035.txt> but it has been re-arranged for easy of use and some fields than are not needed where removed (the counts, which can be calculated out of the length of the lists).
 %% @since 0.2
 -record(dns_message, {
@@ -40,6 +47,12 @@
 	  authority, %% 'ResourceRecord's pointing toward an authority.
 	  additional %% 'ResourceRecord's holding additional information.
 	 }).
+
+-record(question, {
+	  qname,
+	  qtype,
+	  qclass
+	  }).
 
 
 %% @doc Function used by Erlang (compiler?) to ensure that a module implementing gen_dns really is exporting the needed functions.
@@ -170,8 +183,8 @@ handle_info({udp, Socket, IP, InPortNo, Packet}, {Module, ModState}) -> % Handle
     %%gen_udp:send(Socket, IP, InPortNo, Reply),       % Send the reply.
     %%ok = inet:setopts(Socket, [{active, once}]),     % Enable receiving of packages, get the next one.
     Query = parse_dns_message(list_to_binary(Packet)),
-    gen_udp:send(Socket, IP, InPortNo, "caca"), 
     io:fwrite("Query = ~w.~n", [Query]),
+    gen_udp:send(Socket, IP, InPortNo, "huhuhuhuhuhuhuhuhuhuhuhuhuhuhuhuhuhu"),
     {stop, normal, {Module, ModState}};
 handle_info({tcp, Socket, Data}, {Module, ModState}) -> % Handle TCP queries.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {tcp, Socket, Data} , {Module, ModState}]),
@@ -208,5 +221,49 @@ parse_dns_message(RawMsg) ->
     Msg = #dns_message{id = ID, qr = QR, opcode = Opcode, aa = AA, tc = TC, rd = RD, ra = RA, rcode = RCODE},
     io:fwrite("QDCOUNT = ~w, ANCOUNT = ~w, NSCOUNT = ~w, ARCOUNT = ~w, Body = ~w~n", [QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT, Body]),
     io:fwrite("DNS Message = ~w.~n", [Msg]),
-    ok.
-    
+    Questions = parse_dns_query(QDCOUNT, Body),
+    io:fwrite("Questions = ~p~n", [Questions]),
+    Msg.
+
+%% @doc Parse the query section of a DNS message.
+%% @private Internal helper function.
+%% @since 0.2
+parse_dns_query(Count, Body) ->
+    io:fwrite("~w:parse_dns_query(~w, ~w)~n", [?MODULE, Count, Body]),
+    {QNAME, <<QTYPE:16, QCLASS:16>>} = parse_label(Body),
+    io:fwrite("QNAME = ~p, QTYPE = ~p, QCLASS = ~p~n", [QNAME, QTYPE, QCLASS]),
+    #question{qname = QNAME, qtype = QTYPE, qclass = QCLASS}.
+
+%% @doc Parse a DNS label.
+%% @private Internal helper function.
+%% @since 0.2
+parse_label(Body) ->
+    %%io:fwrite("~w:parse_label(~p)~n", [?MODULE, Body]),
+    parse_label([], Body).
+parse_label(Labels, Body) ->
+    %%io:fwrite("~w:parse_label(~p, ~p)~n", [?MODULE, Labels, Body]),
+    <<Length:8, Rest/binary>> = Body,
+    %%io:fwrite("Length = ~w", [Length]), 
+    if
+	Length == 0 ->
+	    %%io:fwrite("~n"),
+	    {lists:reverse(Labels), Rest};
+	Length /= 0 ->
+	    <<Label:Length/binary-unit:8, Rest2/binary>> = Rest,
+	    %%io:fwrite(", Label = ~p, Rest2 = ~p~n", [binary_to_list(Label), Rest2]),
+	    parse_label([binary_to_list(Label)|Labels], Rest2)
+    end.
+
+tests() ->
+    [{"Label parsing", tests_label_parsing()}].
+
+tests_label_parsing() ->
+    [{"com", ?_assert({["com"], <<>>} == parse_label(<<3, "com", 0>>))},
+     {"pupeno.com", ?_assert({["pupeno", "com"], <<>>} == parse_label(<<6, "pupeno", 3, "com", 0>>))},
+     {"software.pupeno.com", ?_assert({["software", "pupeno", "com"], <<>>} == parse_label(<<8, "software", 6, "pupeno", 3, "com", 0>>))},
+     {"com + extra", ?_assert({["com"], <<"trailing trash">>} == parse_label(<<3, "com", 0, "trailing trash">>))},
+     {"pupeno.com + extra", ?_assert({["pupeno", "com"], <<"whatever">>} == parse_label(<<6, "pupeno", 3, "com", 0, "whatever">>))},
+     {"software.pupeno.com + extra", ?_assert({["software", "pupeno", "com"], <<"who cares ?">>} == parse_label(<<8, "software", 6, "pupeno", 3, "com", 0, "who cares ?">>))}].
+
+test() ->
+    eunit:test(tests()).
