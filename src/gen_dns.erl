@@ -230,16 +230,16 @@ parse_message(RawMsg) ->
 %% @private Internal helper function.
 %% @since 0.2
 parse_questions(Count, Body) ->
-    io:fwrite("~w:parse_questions(~w, ~w)~n", [?MODULE, Count, Body]),
+    %%io:fwrite("~w:parse_questions(~w, ~w)~n", [?MODULE, Count, Body]),
     parse_questions(Count, Body, []).
 
 parse_questions(0, Body, Questions) ->
-    io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, 0, Body, Questions]),
+    %%io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, 0, Body, Questions]),
     {lists:reverse(Questions), Body};
 parse_questions(Count, Body, Questions) ->
-    io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, Count, Body, Questions]),
+    %%io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, Count, Body, Questions]),
     {QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} = parse_label(Body),
-    io:fwrite("QNAME = ~p, QTYPE = ~p, QCLASS = ~p~n", [QNAME, qtype_to_atom(QTYPE), qclass_to_atom(QCLASS)]),
+    %%io:fwrite("QNAME = ~p, QTYPE = ~p, QCLASS = ~p~n", [QNAME, qtype_to_atom(QTYPE), qclass_to_atom(QCLASS)]),
     parse_questions(Count - 1, Rest,
 		    [#question{qname = QNAME, 
 			       qtype = qtype_to_atom(QTYPE),
@@ -335,9 +335,35 @@ tests_label_parsing() ->
      {"pupeno.com + extra", ?_assert({["pupeno", "com"], <<"whatever">>} == parse_label(<<6, "pupeno", 3, "com", 0, "whatever">>))},
      {"software.pupeno.com + extra", ?_assert({["software", "pupeno", "com"], <<"who cares ?">>} == parse_label(<<8, "software", 6, "pupeno", 3, "com", 0, "who cares ?">>))}].
 
+-define(C, ["com"]).
+-define(CB, <<3, "com">>).
+-define(PC, ["pupeno"|?C]).
+-define(PCB, <<6, "pupeno", ?CB/binary>>).
+-define(SPC, ["software"|?PC]).
+-define(SPCB, <<8, "software", ?PCB/binary>>).
+-define(C_ALL_IN, #question{qname = ?C, qtype = all, qclass = in}).
+-define(C_ALL_INB, <<?CB/binary, 0, 255:16, 1:16>>).
+-define(C_MX_CS, #question{qname = ?C, qtype = mx, qclass = cs}).
+-define(C_MX_CSB, <<?CB/binary, 0, 15:16, 2:16>>).
+-define(PC_NS_CH, #question{qname = ?PC, qtype = ns, qclass = ch}).
+-define(PC_NS_CHB, <<?PCB/binary, 0, 2:16, 3:16>>).
+-define(PC_SOA_HS, #question{qname = ?PC, qtype = soa, qclass = hs}).
+-define(PC_SOA_HSB, <<?PCB/binary, 0, 6:16, 4:16>>).
+-define(SPC_A_ANY, #question{qname = ?SPC, qtype = a, qclass = any}).
+-define(SPC_A_ANYB, <<?SPCB/binary, 0, 1:16, 255:16>>).
+-define(SPC_PTR_IN, #question{qname = ?SPC, qtype = ptr, qclass = in}).
+-define(SPC_PTR_INB, <<?SPCB/binary, 0, 12:16, 1:16>>).
+
+
 tests_question_parsing() ->
-    [{"com", ?_assert({[#question{qname = ["com"], qtype = all, qclass = in}], <<>>} ==
-		      parse_questions(1, <<3, "com", 0, 255:16, 1:16>>))}].
+    [?_assert({[?C_ALL_IN], <<>>} == parse_questions(1, ?C_ALL_INB)),
+     ?_assert({[?C_MX_CS], <<>>} == parse_questions(1, ?C_MX_CSB)),
+     ?_assert({[?PC_NS_CH], <<>>} == parse_questions(1, ?PC_NS_CHB)),
+     ?_assert({[?PC_SOA_HS], <<>>} == parse_questions(1, ?PC_SOA_HSB)),
+     ?_assert({[?SPC_A_ANY], <<>>} == parse_questions(1, ?SPC_A_ANYB)),
+     ?_assert({[?SPC_PTR_IN], <<>>} == parse_questions(1, ?SPC_PTR_INB))].
+     %%?_assert({[?C_MX_CS, ?PC_NS_CH], <<>>} == parse_questions(2, <<?C_MX_CSB/binary, ?PC_NS_CHB/binary>>)),
+     %%?_assert({[?PC_SOA_HS, ?SPC_A_ANY, ?SPC_PTR_IN], <<>>} == parse_questions(3, <<?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>))].
 
 test() ->
     eunit:test(tests()).
