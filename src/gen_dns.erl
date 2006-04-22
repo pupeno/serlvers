@@ -257,9 +257,6 @@ parse_resource_records(0, Body, RRs) ->
     io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
     {lists:reverse(RRs), Body}.
     
-
-
-
 %% @doc Parse a DNS label.
 %% @private Internal helper function.
 %% @since 0.2
@@ -327,7 +324,8 @@ qclass_to_atom(Class) -> class_to_atom(Class).
     
 %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
 tests() ->
-    {"Label parsing", tests_label_parsing()}.
+    [{"Label parsing", tests_label_parsing()},
+     {"Question parsing", tests_question_parsing()}].
 
 tests_label_parsing() ->
     [{"com", ?_assert({["com"], <<>>} == parse_label(<<3, "com", 0>>))},
@@ -337,8 +335,9 @@ tests_label_parsing() ->
      {"pupeno.com + extra", ?_assert({["pupeno", "com"], <<"whatever">>} == parse_label(<<6, "pupeno", 3, "com", 0, "whatever">>))},
      {"software.pupeno.com + extra", ?_assert({["software", "pupeno", "com"], <<"who cares ?">>} == parse_label(<<8, "software", 6, "pupeno", 3, "com", 0, "who cares ?">>))}].
 
-%% tests_question_parsing() ->
-%%     [{"com
+tests_question_parsing() ->
+    [{"com", ?_assert({[#question{qname = ["com"], qtype = all, qclass = in}], <<>>} ==
+		      parse_questions(1, <<3, "com", 0, 255:16, 1:16>>))}].
 
 test() ->
     eunit:test(tests()).
