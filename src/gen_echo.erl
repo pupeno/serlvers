@@ -144,7 +144,6 @@ handle_info({udp, Socket, IP, InPortNo, Packet}, {Module, ModState}) -> % Handle
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, Packet} , {Module, ModState}]),
     {Reply, NewModState} = Module:echo(Packet, ModState),               % Generate the reply.
     gen_udp:send(Socket, IP, InPortNo, Reply),                          % Send the reply.
-    ok = inet:setopts(Socket, [{active, once}]),                        % Enable receiving of packages, get the next one.
     {noreply, {Module, NewModState}};
 handle_info({tcp, Socket, Packet}, {Module, ModState}) -> % Handle TCP packages.
     %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {tcp, Socket, Packet}, {Module, ModState}]),

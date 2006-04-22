@@ -196,7 +196,6 @@ send_data(udp, Socket, IP, InPortNo, DatagramLength, Module, ModState) ->
             send_data(udp, Socket, IP, InPortNo,                              % Send it.
                       DatagramLength - length(Reply), 
                       Module, NewModState);
-        DatagramLength =< length(Reply) ->               % We are done.
-            ok = inet:setopts(Socket, [{active, once}]), % Enable receiving of packages, get the next one.
+        DatagramLength =< length(Reply) -> % We are done.
             NewModState
     end.
