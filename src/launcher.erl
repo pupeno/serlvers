@@ -172,7 +172,7 @@ terminate(_Reason, {_Module, tcp, LSocket}) ->
     ok;
 terminate(_Reason, {_Module, udp, Socket}) ->
     %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, udp, Socket}]),
-    ok = gen_udp:close(Socket), % Close the socket, we are done
+    ok = gen_udp:close(LSocket), % Close the socket, we are done
     ok.
 
 %% @doc Err... &lt;sarcasm&gt;code changes ?&lt;/sarcasm&gt;
