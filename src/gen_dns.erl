@@ -182,13 +182,13 @@ handle_info({udp, Socket, IP, InPortNo, Packet}, {Module, ModState}) -> % Handle
     %%{Reply, NewModState} = Module:dns(ModState), % Generate the reply.
     %%gen_udp:send(Socket, IP, InPortNo, Reply),       % Send the reply.
     %%ok = inet:setopts(Socket, [{active, once}]),     % Enable receiving of packages, get the next one.
-    Query = parse_dns_message(list_to_binary(Packet)),
+    Query = parse_message(list_to_binary(Packet)),
     io:fwrite("Query = ~w.~n", [Query]),
     gen_udp:send(Socket, IP, InPortNo, "huhuhuhuhuhuhuhuhuhuhuhuhuhuhuhuhuhu"),
     {stop, normal, {Module, ModState}};
 handle_info({tcp, Socket, Data}, {Module, ModState}) -> % Handle TCP queries.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {tcp, Socket, Data} , {Module, ModState}]),
-    Query = parse_dns_message(list_to_binary(Data)),
+    Query = parse_message(list_to_binary(Data)),
     io:fwrite("Query = ~w.~n", [Query]),
     gen_tcp:send(Socket, "caca"),
     {stop, normal, {Module, ModState}};
@@ -214,25 +214,28 @@ code_change(_OldVsn, State, _Extra) ->
 %% @doc Given a binary string representing a DNS message (the incomming from the network) return the same DNS message represented as records.
 %% @private Internal helper function.
 %% @since 0.2
-parse_dns_message(RawMsg) ->
-    io:fwrite("~w:parse_dns_message(~w)~n", [?MODULE, RawMsg]),
+parse_message(RawMsg) ->
+    io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
     <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4,
      QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
     Msg = #dns_message{id = ID, qr = QR, opcode = Opcode, aa = AA, tc = TC, rd = RD, ra = RA, rcode = RCODE},
     io:fwrite("QDCOUNT = ~w, ANCOUNT = ~w, NSCOUNT = ~w, ARCOUNT = ~w, Body = ~w~n", [QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT, Body]),
     io:fwrite("DNS Message = ~w.~n", [Msg]),
-    Questions = parse_dns_query(QDCOUNT, Body),
+    Questions = parse_questions(QDCOUNT, Body),
     io:fwrite("Questions = ~p~n", [Questions]),
     Msg.
 
 %% @doc Parse the query section of a DNS message.
 %% @private Internal helper function.
 %% @since 0.2
-parse_dns_query(Count, Body) ->
-    io:fwrite("~w:parse_dns_query(~w, ~w)~n", [?MODULE, Count, Body]),
-    {QNAME, <<QTYPE:16, QCLASS:16>>} = parse_label(Body),
+parse_questions(0, _Body) ->
+    io:fwrite("~w:parse_questions(~w, ~w)~n", [?MODULE, 0, _Body]),
+    [];
+parse_questions(Count, Body) ->
+    io:fwrite("~w:parse_questions(~w, ~w)~n", [?MODULE, Count, Body]),
+    {QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} = parse_label(Body),
     io:fwrite("QNAME = ~p, QTYPE = ~p, QCLASS = ~p~n", [QNAME, QTYPE, QCLASS]),
-    #question{qname = QNAME, qtype = QTYPE, qclass = QCLASS}.
+    [#question{qname = QNAME, qtype = QTYPE, qclass = QCLASS}, parse_questions(Count - 1, Rest)].
 
 %% @doc Parse a DNS label.
 %% @private Internal helper function.
@@ -254,8 +257,54 @@ parse_label(Labels, Body) ->
 	    parse_label([binary_to_list(Label)|Labels], Rest2)
     end.
 
+%% @doc Turn a numeric DNS type into an atom.
+%% @private Internal helper function.
+%% @since 0.2
+type_to_atom(1) -> a;
+type_to_atom(2) -> ns;
+type_to_atom(3) -> md;
+type_to_atom(4) -> mf;
+type_to_atom(5) -> cname;
+type_to_atom(6) -> soa;
+type_to_atom(7) -> mb;
+type_to_atom(8) -> mg;
+type_to_atom(9) -> mr;
+type_to_atom(10) -> null;
+type_to_atom(11) -> wks;
+type_to_atom(12) -> ptr;
+type_to_atom(13) -> hinfo;
+type_to_atom(14) -> minfo;
+type_to_atom(15) -> mx;
+type_to_atom(_) -> unknown.
+
+%% @doc Turn a numeric DNS qtype into an atom.
+%% @private Internal helper function.
+%% @since 0.2
+qtype_to_atom(252) -> axfr;
+qtype_to_atom(253) -> mailb;
+qtype_to_atom(254) -> maila;
+qtype_to_atom(255) -> all;
+qtype_to_atom(Type) -> type_to_atom(Type).
+
+%% @doc Turn a numeric DNS class into an atom.
+%% @private Internal helper function.
+%% @since 0.2
+class_to_atom(1) -> in;
+class_to_atom(2) -> cs;
+class_to_atom(3) -> ch;
+class_to_atom(4) -> hs;
+class_to_atom(_) -> unknown.
+
+%% @doc Turn a numeric DNS qclass into an atom.
+%% @private Internal helper function.
+%% @since 0.2
+qclass_to_atom(255) -> any;
+qclass_to_atom(Class) -> class_to_atom(Class).
+
+    
+%%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
 tests() ->
-    [{"Label parsing", tests_label_parsing()}].
+    {"Label parsing", tests_label_parsing()}.
 
 tests_label_parsing() ->
     [{"com", ?_assert({["com"], <<>>} == parse_label(<<3, "com", 0>>))},
@@ -264,6 +313,9 @@ tests_label_parsing() ->
      {"com + extra", ?_assert({["com"], <<"trailing trash">>} == parse_label(<<3, "com", 0, "trailing trash">>))},
      {"pupeno.com + extra", ?_assert({["pupeno", "com"], <<"whatever">>} == parse_label(<<6, "pupeno", 3, "com", 0, "whatever">>))},
      {"software.pupeno.com + extra", ?_assert({["software", "pupeno", "com"], <<"who cares ?">>} == parse_label(<<8, "software", 6, "pupeno", 3, "com", 0, "who cares ?">>))}].
+
+%% tests_question_parsing() ->
+%%     [{"com
 
 test() ->
     eunit:test(tests()).
