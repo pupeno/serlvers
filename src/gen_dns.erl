@@ -216,26 +216,49 @@ code_change(_OldVsn, State, _Extra) ->
 %% @since 0.2
 parse_message(RawMsg) ->
     io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
-    <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4,
-     QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
-    Msg = #dns_message{id = ID, qr = QR, opcode = Opcode, aa = AA, tc = TC, rd = RD, ra = RA, rcode = RCODE},
+    <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
     io:fwrite("QDCOUNT = ~w, ANCOUNT = ~w, NSCOUNT = ~w, ARCOUNT = ~w, Body = ~w~n", [QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT, Body]),
-    io:fwrite("DNS Message = ~w.~n", [Msg]),
-    Questions = parse_questions(QDCOUNT, Body),
-    io:fwrite("Questions = ~p~n", [Questions]),
+    {Questions, Rest} = parse_questions(QDCOUNT, Body),
+    {Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
+    {Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
+    {Additional, _} = parse_resource_records(ARCOUNT, Rest3),
+    Msg = #dns_message{id = ID, qr = QR, opcode = Opcode, aa = AA, tc = TC, rd = RD, ra = RA, rcode = RCODE, question = Questions, answer = Answer, authority = Authority, additional = Additional},
+    io:fwrite("DNS Message = ~p.~n", [Msg]),
     Msg.
 
 %% @doc Parse the query section of a DNS message.
 %% @private Internal helper function.
 %% @since 0.2
-parse_questions(0, _Body) ->
-    io:fwrite("~w:parse_questions(~w, ~w)~n", [?MODULE, 0, _Body]),
-    [];
 parse_questions(Count, Body) ->
     io:fwrite("~w:parse_questions(~w, ~w)~n", [?MODULE, Count, Body]),
+    parse_questions(Count, Body, []).
+
+parse_questions(0, Body, Questions) ->
+    io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, 0, Body, Questions]),
+    {lists:reverse(Questions), Body};
+parse_questions(Count, Body, Questions) ->
+    io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, Count, Body, Questions]),
     {QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} = parse_label(Body),
-    io:fwrite("QNAME = ~p, QTYPE = ~p, QCLASS = ~p~n", [QNAME, QTYPE, QCLASS]),
-    [#question{qname = QNAME, qtype = QTYPE, qclass = QCLASS}, parse_questions(Count - 1, Rest)].
+    io:fwrite("QNAME = ~p, QTYPE = ~p, QCLASS = ~p~n", [QNAME, qtype_to_atom(QTYPE), qclass_to_atom(QCLASS)]),
+    parse_questions(Count - 1, Rest,
+		    [#question{qname = QNAME, 
+			       qtype = qtype_to_atom(QTYPE),
+			       qclass = qclass_to_atom(QCLASS)}|
+		     Questions]).
+
+%% @doc Parse the resource records.
+%% @private Internal helper function.
+%% @since 0.2
+parse_resource_records(Count, Body) ->
+    io:fwrite("~w:parse_resource_records(~w, ~w)~n", [?MODULE, Count, Body]),
+    parse_resource_records(Count, Body, []).
+
+parse_resource_records(0, Body, RRs) ->
+    io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
+    {lists:reverse(RRs), Body}.
+    
+
+
 
 %% @doc Parse a DNS label.
 %% @private Internal helper function.
