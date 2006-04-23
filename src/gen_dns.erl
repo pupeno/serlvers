@@ -1,22 +1,22 @@
-%% Copyright (C) 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
-%%
-%% This file is part of Serlvers.
-%%
-%% Serlvers is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
-%% Serlvers is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-%% You should have received a copy of the GNU General Public License along with Serlvers; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-%% Linking Serlvers statically or dynamically with other modules is making a combined work based on Serlvers. Thus, the terms and conditions of the GNU General Public License cover the whole combination.
-%% In addition, as a special exception, the copyright holders of Serlvers give you permission to combine Serlvers program with code included in the standard release of Erlang/OTP under the Erlang Public Licence (or modified versions of such code, with unchanged license). You may copy and distribute such a system following the terms of the GNU GPL for Serlvers and the licenses of the other code concerned, provided that you include the source code of that other code when and as the GNU GPL requires distribution of source code.
+%%% Copyright (C) 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
+%%%
+%%% This file is part of Serlvers.
+%%%
+%%% Serlvers is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+%%% Serlvers is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+%%% You should have received a copy of the GNU General Public License along with Serlvers; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+%%% Linking Serlvers statically or dynamically with other modules is making a combined work based on Serlvers. Thus, the terms and conditions of the GNU General Public License cover the whole combination.
+%%% In addition, as a special exception, the copyright holders of Serlvers give you permission to combine Serlvers program with code included in the standard release of Erlang/OTP under the Erlang Public Licence (or modified versions of such code, with unchanged license). You may copy and distribute such a system following the terms of the GNU GPL for Serlvers and the licenses of the other code concerned, provided that you include the source code of that other code when and as the GNU GPL requires distribution of source code.
 
-%% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
-%% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
-%% @doc The gen_dns behaviour is used to implement Dns servers according to <a href="http://www.ietf.org/rfc/rfc1034.txt">RFC1034</a> and <a href="http://www.ietf.org/rfc/rfc1035.txt">RFC1035</a>.
-%% <p>To make a dns server make a module implementing the behaviour gen_dns, that requires the following functions:</p>
-%% <ul>
-%%  <li>...</li>
-%% </ul>
-%% @see launcher.
-%% @since 0.2
+%%% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
+%%% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
+%%% @doc The gen_dns behaviour is used to implement Dns servers according to <a href="http://www.ietf.org/rfc/rfc1034.txt">RFC1034</a> and <a href="http://www.ietf.org/rfc/rfc1035.txt">RFC1035</a>.
+%%% <p>To make a dns server make a module implementing the behaviour gen_dns, that requires the following functions:</p>
+%%% <ul>
+%%%  <li>...</li>
+%%% </ul>
+%%% @see launcher.
+%%% @since 0.2
 
 -module(gen_dns).
 -behaviour(gen_server).
@@ -216,25 +216,14 @@ parse_message(RawMsg) ->
     %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
     <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, 
      ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
-    %%io:fwrite("QDCOUNT = ~w, ANCOUNT = ~w, NSCOUNT = ~w, ARCOUNT = ~w, Body = ~w~n",
-	%%      [QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT, Body]),
     {Questions, Rest} = parse_questions(QDCOUNT, Body),
     {Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
     {Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
     {Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
-    Msg = #dns_message{id = ID, 
-		       qr = qr_to_atom(QR),
-		       opcode = opcode_to_atom(Opcode),
-		       aa = bool_to_atom(AA),
-		       tc = bool_to_atom(TC),
-		       rd = bool_to_atom(RD),
-		       ra = bool_to_atom(RA),
-		       rcode = rcode_to_atom(RCODE),
-		       question = Questions,
-		       answer = Answer,
-		       authority = Authority,
-		       additional = Additional},
-    Msg.
+    #dns_message{id = ID, qr = qr_to_atom(QR), opcode = opcode_to_atom(Opcode),
+		 aa = bool_to_atom(AA), tc = bool_to_atom(TC), rd = bool_to_atom(RD),
+		 ra = bool_to_atom(RA), rcode = rcode_to_atom(RCODE), question = Questions,
+		 answer = Answer, authority = Authority, additional = Additional}.
 
 %% @doc Parse the query section of a DNS message.
 %% @private Internal helper function.
@@ -249,11 +238,8 @@ parse_questions(0, Body, Questions) ->
 parse_questions(Count, Body, Questions) ->
     %%io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, Count, Body, Questions]),
     {QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} = parse_label(Body),
-    %%io:fwrite("QNAME = ~p, QTYPE = ~p, QCLASS = ~p~n", 
-    %%          [QNAME, qtype_to_atom(QTYPE), qclass_to_atom(QCLASS)]),
     parse_questions(Count - 1, Rest,
-		    [#question{qname = QNAME, 
-			       qtype = qtype_to_atom(QTYPE),
+		    [#question{qname = QNAME, qtype = qtype_to_atom(QTYPE),
 			       qclass = qclass_to_atom(QCLASS)}|
 		     Questions]).
 
@@ -277,14 +263,10 @@ parse_label(Body) ->
 parse_label(Labels, Body) ->
     %%io:fwrite("~w:parse_label(~p, ~p)~n", [?MODULE, Labels, Body]),
     <<Length:8, Rest/binary>> = Body,
-    %%io:fwrite("Length = ~w", [Length]), 
-    if
-	Length == 0 ->
-	    %%io:fwrite("~n"),
+    if Length == 0 ->
 	    {lists:reverse(Labels), Rest};
-	Length /= 0 ->
+       Length /= 0 ->
 	    <<Label:Length/binary-unit:8, Rest2/binary>> = Rest,
-	    %%io:fwrite(", Label = ~p, Rest2 = ~p~n", [binary_to_list(Label), Rest2]),
 	    parse_label([binary_to_list(Label)|Labels], Rest2)
     end.
 
@@ -469,7 +451,8 @@ tests_message_parsing() ->
 			   answer = [],
 			   authority = [],
 			   additional = []} ==
-	     parse_message(<<63296:16, 0:1, 0:4, 0:1, 0:1, 1:1, 0:1, 0:3, 0:4, 0:16, 0:16, 0:16, 0:16>>))].
+	     parse_message(<<63296:16, 0:1, 0:4, 0:1, 0:1, 1:1, 0:1, 0:3, 0:4,
+			    0:16, 0:16, 0:16, 0:16>>))].
 
 test() ->
     eunit:test(tests()).

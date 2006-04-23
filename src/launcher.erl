@@ -1,25 +1,26 @@
-%% Copyright (C) 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
-%%
-%% This file is part of Serlvers.
-%%
-%% Serlvers is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
-%% Serlvers is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-%% You should have received a copy of the GNU General Public License along with Serlvers; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-%% Linking Serlvers statically or dynamically with other modules is making a combined work based on Serlvers. Thus, the terms and conditions of the GNU General Public License cover the whole combination.
-%% In addition, as a special exception, the copyright holders of Serlvers give you permission to combine Serlvers program with code included in the standard release of Erlang/OTP under the Erlang Public Licence (or modified versions of such code, with unchanged license). You may copy and distribute such a system following the terms of the GNU GPL for Serlvers and the licenses of the other code concerned, provided that you include the source code of that other code when and as the GNU GPL requires distribution of source code.
+%%% Copyright (C) 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
+%%%
+%%% This file is part of Serlvers.
+%%%
+%%% Serlvers is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+%%% Serlvers is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+%%% You should have received a copy of the GNU General Public License along with Serlvers; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+%%% Linking Serlvers statically or dynamically with other modules is making a combined work based on Serlvers. Thus, the terms and conditions of the GNU General Public License cover the whole combination.
+%%% In addition, as a special exception, the copyright holders of Serlvers give you permission to combine Serlvers program with code included in the standard release of Erlang/OTP under the Erlang Public Licence (or modified versions of such code, with unchanged license). You may copy and distribute such a system following the terms of the GNU GPL for Serlvers and the licenses of the other code concerned, provided that you include the source code of that other code when and as the GNU GPL requires distribution of source code.
 
-%% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
-%% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
-%% @doc Launcher launches tcp and udp serviceses based on the behaviours of Serlvers.
-%% <p>It basically handles opening the sockets and waiting for data to latter send it to the serlvers.</p>
-%% <p>Whenever you see the word "serlver" used as a noun it refeers to a module implementing one of the Serlvers behaviours like {@link gen_echo}, {@link gen_daytime}, etc.</p>
-%% <p>For tcp services a new worker is spawned on each connection and that worker handles the connection untill termination. The message {connected, Socket} where connected is an atom and Socket the connected socket is sent to the worker upon connection.</p>
-%% <p>For udp services only one worker is spawned which will handle all datagrams.</p>
-%% @see gen_echo.
-%% @see gen_chargen.
-%% @see gen_daytime.
-%% @see gen_time.
-%% @since 0.1.0
+%%% @author José Pablo Ezequiel "Pupeno" Fernández Silva <pupeno@pupeno.com> [http://pupeno.com]
+%%% @copyright 2006 José Pablo Ezequiel "Pupeno" Fernández Silva
+%%% @doc Launcher launches tcp and udp serviceses based on the behaviours of Serlvers.
+%%% <p>It basically handles opening the sockets and waiting for data to latter send it to the serlvers.</p>
+%%% <p>Whenever you see the word "serlver" used as a noun it refeers to a module implementing one of the Serlvers behaviours like {@link gen_echo}, {@link gen_daytime}, etc.</p>
+%%% <p>For tcp services a new worker is spawned on each connection and that worker handles the connection untill termination. The message {connected, Socket} where connected is an atom and Socket the connected socket is sent to the worker upon connection.</p>
+%%% <p>For udp services only one worker is spawned which will handle all datagrams.</p>
+%%% @see gen_dns.
+%%% @see gen_echo.
+%%% @see gen_chargen.
+%%% @see gen_daytime.
+%%% @see gen_time.
+%%% @since 0.1.0
 
 %% @type transport() = tcp | udp
 
@@ -37,7 +38,7 @@
 %% @spec (Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start(Module, Transport, Port) ->
-    %%io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Transport, Port]),
+    %io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Transport, Port]),
     gen_server:start(?MODULE, {Module, Transport, Port}, []).
 
 %% @doc Launch a named serlver.
@@ -49,7 +50,7 @@ start(Module, Transport, Port) ->
 %%   Name = {local, atom()} | {global, atom()}
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start(SupName, Module, Transport, Port) ->
-    %%io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Port]),
+    %io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Port]),
     gen_server:start(SupName, ?MODULE, {Module, Transport, Port}, []).
 
 %% @doc Launch an unamed serlver and link to it.
@@ -60,7 +61,7 @@ start(SupName, Module, Transport, Port) ->
 %% @spec (Module::atom(), Transport::transport(), Port::integer()) -> Result
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start_link(Module, Transport, Port) ->
-    %%io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Transport, Port]),
+    %io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Transport, Port]),
     gen_server:start_link(?MODULE, {Module, Transport, Port}, []).
 
 %% @doc Launch a named serlver and link to it.
@@ -74,7 +75,7 @@ start_link(Module, Transport, Port) ->
 %%   Name = {local, atom()} | {global, atom()}
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start_link(SupName, Module, Transport, Port) ->
-    %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Port]),
+    %io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Port]),
     gen_server:start_link(SupName, ?MODULE, {Module, Transport, Port}, []).
 
 %% @doc Stops a running process identified by Name.
@@ -87,10 +88,10 @@ start_link(SupName, Module, Transport, Port) ->
 %% @spec (Name) -> ok
 %%   Name = atom() | {local, atom()} | {global, atom()}
 stop({_Scope, Name}) ->
-    %%io:fwrite("~w:stop(~w)~n", [?MODULE, {_Scope, Name}]),
+    %io:fwrite("~w:stop(~w)~n", [?MODULE, {_Scope, Name}]),
     gen_server:cast(Name, stop);
 stop(Name) ->
-    %%io:fwrite("~w:stop(~w)~n", [?MODULE, Name]),
+    io:fwrite("~w:stop(~w)~n", [?MODULE, Name]),
     gen_server:cast(Name, stop).
 
 %% @doc The follwing function is in charge of accepting new TCP connections.
@@ -98,7 +99,7 @@ stop(Name) ->
 %% @private Only called from {@link init}.
 %% @since 0.1.0
 acceptor(tcp, Module, LSocket) ->
-    io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, tcp, Module, LSocket]),
+    %io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, tcp, Module, LSocket]),
     case gen_tcp:accept(LSocket) of                        % Wait for an incomming connection.
 	{ok, Socket} ->
 	    {ok, Pid} = Module:start(),                    % Run a worker.
@@ -110,29 +111,29 @@ acceptor(tcp, Module, LSocket) ->
 	    {error, Reason}
     end;
 acceptor(udp, Module, LSocket) ->
-    io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, udp, Module, LSocket]),
+    %io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, udp, Module, LSocket]),
     receive                                               % Wait for a message.
-        {udp, Socket, IP, InPortNo, Packet} ->            % The message is an UDP packet. 
+        {udp, LSocket, IP, InPortNo, Packet} ->            % The message is an UDP packet. 
             {ok, Pid} = Module:start(),                   % Start the worker to do something with it.
-            Pid ! {udp, Socket, IP, InPortNo, Packet},    % Send the packet to the worker.
+            Pid ! {udp, LSocket, IP, InPortNo, Packet},    % Send the packet to the worker.
 	    ok = inet:setopts(LSocket, [{active, once}]), % Enable accepting one packet.
             acceptor(udp, Module, LSocket);               % Wait for the next packet.
-        _ ->
-            acceptor(udp, Module, LSocket)   % TODO: do some logging ? we received an unexpectde message.
-    
+        Other ->
+	    error_logger:error_msg("Error: Process ~w got unknown msg ~w~n.", [self(), Other]),
+            acceptor(udp, Module, LSocket)   % TODO: do some logging ? we received an unexpectde message.    
     end.
     
 %% @doc Called by gen_server to initialize the launcher.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 init({Module, tcp, Port}) ->
-    %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, tcp, Port}]),
+    %io:fwrite("~w:init(~w)~n", [?MODULE, {Module, tcp, Port}]),
     process_flag(trap_exit, true),
     {ok, LSocket} = gen_tcp:listen(Port, [{active, once}]), % Open the tcp port.
     spawn_link(?MODULE, acceptor, [tcp, Module, LSocket]),  % Launch the acceptor.
     {ok, {Module, tcp, LSocket}};                           % We are done.
 init({Module, udp, Port}) ->
-    %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, udp, Port}]),
+    %io:fwrite("~w:init(~w)~n", [?MODULE, {Module, udp, Port}]),
     process_flag(trap_exit, true),
     {ok, LSocket} = gen_udp:open(Port, [{active, once}]),        % Open the udp port.
     Pid = spawn_link(?MODULE, acceptor, [udp, Module, LSocket]), % Run the acceptor
@@ -143,35 +144,35 @@ init({Module, udp, Port}) ->
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 handle_call(_Request, _From, State) ->
-    %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
+    %io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc The only cast to answer is to stop.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 handle_cast(stop, State) ->
-    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
+    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
 handle_cast(_Request, State) ->
-    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
+    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
 %% @doc No other signals to answer.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 handle_info(_Info, State) ->
-    %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
+    %io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
 
 %% @doc On termination, close the sockets.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 terminate(_Reason, {_Module, tcp, LSocket}) ->
-    %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, tcp, LSocket}]),
+    %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, tcp, LSocket}]),
     ok = gen_tcp:close(LSocket), % Close the socket, we are done.
     ok;
-terminate(_Reason, {_Module, udp, Socket}) ->
-    %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, udp, Socket}]),
+terminate(_Reason, {_Module, udp, LSocket}) ->
+    %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, udp, LSocket}]),
     ok = gen_udp:close(LSocket), % Close the socket, we are done
     ok.
 
@@ -179,5 +180,5 @@ terminate(_Reason, {_Module, udp, Socket}) ->
 %% @private I think no one is interested in this function, yet.
 %% @since 0.1.0
 code_change(_OldVsn, State, _Extra) ->
-    %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
+    %io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
