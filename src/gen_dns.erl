@@ -222,7 +222,18 @@ parse_message(RawMsg) ->
     {Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
     {Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
     {Additional, _} = parse_resource_records(ARCOUNT, Rest3),
-    Msg = #dns_message{id = ID, qr = QR, opcode = Opcode, aa = AA, tc = TC, rd = RD, ra = RA, rcode = RCODE, question = Questions, answer = Answer, authority = Authority, additional = Additional},
+    Msg = #dns_message{id = ID, 
+		       qr = qr_to_atom(QR),
+		       opcode = opcode_to_atom(Opcode),
+		       aa = bool_to_atom(AA),
+		       tc = bool_to_atom(TC),
+		       rd = bool_to_atom(RD),
+		       ra = bool_to_atom(RA),
+		       rcode = rcode_to_atom(RCODE),
+		       question = Questions,
+		       answer = Answer,
+		       authority = Authority,
+		       additional = Additional},
     io:fwrite("DNS Message = ~p.~n", [Msg]),
     Msg.
 
@@ -321,11 +332,47 @@ class_to_atom(_) -> unknown.
 qclass_to_atom(255) -> any;
 qclass_to_atom(Class) -> class_to_atom(Class).
 
+%% @doc Turn a numeric DNS QR into an atom.
+%% @private Internal helper function.
+%% @since 0.2
+qr_to_atom(0) -> query_;
+qr_to_atom(1) -> response;
+qr_to_atom(_) -> unknown.
+		      
+%% @doc Turn a numeric DNS Opcode into an atom.
+%% @private Internal helper function.
+%% @since 0.2
+opcode_to_atom(0) -> query_;
+opcode_to_atom(1) -> iquery;
+opcode_to_atom(2) -> status;
+opcode_to_atom(_) -> unknown.
+
+%% @doc Turn a numeric boolean where 0 is false and 1 is true into an atom.
+%% @private Internal helper function.
+%% @since 0.2
+bool_to_atom(0) -> false;
+bool_to_atom(1) -> true;
+bool_to_atom(_) -> unknown.
+
+%% @doc Turn a numeric DNS RCODE into an atom.
+%% @private Internal helper function.
+%% @since 0.2
+rcode_to_atom(0) -> no_error;
+rcode_to_atom(1) -> format_error;
+rcode_to_atom(2) -> server_failure;
+rcode_to_atom(3) -> name_error;
+rcode_to_atom(4) -> not_implemente;
+rcode_to_atom(5) -> refused;
+rcode_to_atom(_) -> unknown.
+
+
     
 %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
 tests() ->
     [{"Label parsing", tests_label_parsing()},
-     {"Question parsing", tests_question_parsing()}].
+     {"Question parsing", tests_question_parsing()}]. %%,
+%%     {"Resource record parsing", test_resource_record_parsing()},
+%%     {"Message parsing", test_message_parsing}].
 
 -define(C, ["com"]).
 -define(CB, <<3, "com">>).
@@ -395,6 +442,11 @@ tests_question_parsing() ->
 	      parse_questions(6,
 			      <<?C_ALL_INB/binary, ?C_MX_CSB/binary, ?PC_NS_CHB/binary,
 			       ?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>))}].
+test_resource_record_parsing() ->
+    [].
+
+test_message_parsing() ->
+    [].
 
 test() ->
     eunit:test(tests()).
