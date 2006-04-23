@@ -411,9 +411,39 @@ tests() ->
      {"Resource record parsing", tests_resource_record_parsing()},
      {"Message parsing", tests_message_parsing()}].
 
--define(DOMAINS, [{["com"], <<3, "com">>},
-		  {["pupeno"], <<6, "pupeno">>},
-		  {["software"], <<8, "software">>}]).
+%% -define(LABELS, [{["com"], <<3, "com">>},
+%% 		 {["pupeno"], <<6, "pupeno">>},
+%% 		 {["software"], <<8, "software">>},
+%% 		 {["packages"], <<8, "packages">>}]).
+-define(LABELS, [{["com"], <<3>>},
+		 {["pupeno"], <<6>>},
+		 {["software"], <<8>>},
+		 {["mail"], <<4>>}]).
+
+build_domains(Length) ->
+    io:fwrite("~w:build_domains(~p)~n", [?MODULE, Length]),
+    build_domains(?LABELS, Length).
+
+build_domains(_Labels, 0) ->
+    io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, _Labels, 0]),
+    [];
+build_domains(Labels, 1) ->
+    io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, Labels, 1]),
+    Labels;
+build_domains(Labels, 2) ->
+    io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, Labels, 2]),
+    Comb = fun(Head) ->
+		   one_label_to_many(Head, Labels) end,
+    lists:flatten(lists:map(Comb, Labels)).
+    
+one_label_to_many({Parsed, Raw}, Labels) ->
+    io:fwrite("~w:one_with_many(~p, ~p)~n", [?MODULE, {Parsed, Raw}, Labels]),
+    Comb = fun({Parsed2, Raw2}) -> 
+		   {lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>} end,
+    lists:map(Comb, Labels).
+
+
+
 -define(C, ["com"]).
 -define(CB, <<3, "com">>).
 -define(PC, ["pupeno"|?C]).
@@ -424,19 +454,19 @@ tests() ->
 %list_of_domains(N) ->
 %    LabelsCount = random:uniform(5).
 
-domain(N) ->
-    domain(?DOMAINS, N).
-domain(Labels, N) ->
-    {I1,I2,I3} = erlang:now(),
-    random:seed(I1,I2,I3),
-    domain(Labels, N, [], <<>>).
+%% domain(Length) ->
+%%     domain(?DOMAINS, Length).
+%% domain(Labels, Length) ->
+%%     {I1,I2,I3} = erlang:now(),
+%%     random:seed(I1,I2,I3),
+%%     domain(Labels, Length, [], <<>>).
 
-domain(_Labels, 0, Parsed, Raw) ->
-    {Parsed, <<Raw/binary, 0>>};
-domain(Labels, N, Parsed, Raw) ->
-    {NewParsed, NewRaw} = one_of(Labels),
-    io:fwrite("NewParsed = ~w, NewRaw = ~w~n", [NewParsed, NewRaw]),
-    domain(Labels, N - 1, [NewParsed|Parsed], <<NewRaw/binary, Raw/binary>>).
+%% domain(_Labels, 0, Parsed, Raw) ->
+%%     {Parsed, <<Raw/binary, 0>>};
+%% domain(Labels, Length, Parsed, Raw) ->
+%%     {NewParsed, NewRaw} = one_of(Labels),
+%%     io:fwrite("NewParsed = ~w, NewRaw = ~w~n", [NewParsed, NewRaw]),
+%%     domain(Labels, Length - 1, [NewParsed|Parsed], <<NewRaw/binary, Raw/binary>>).
     
 
 tests_label_parsing() ->
