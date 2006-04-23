@@ -34,32 +34,39 @@
 %% @doc Structure defining a DNS message. It is based on what is defined on RFC1035 <http://www.ietf.org/rfc/rfc1035.txt> but it has been re-arranged for easy of use and some fields than are not needed where removed (the counts, which can be calculated out of the length of the lists).
 %% @since 0.2
 -record(dns_message, {
-	  id,        %% Assigned by the program that generates queries. This identifier is copied to the corresponding reply and can be used by the requester to match up replies to outstanding queries.
-	  qr,        %% Whether this message is a query ('False'), or a response ('True').
-	  opcode,    %% Kind of query in this message.  This value is set by the originator of a query and copied into the response.
-	  aa,        %% The responding name server is an authority for the domain name in question section.
-	  tc,        %% Specifies that this message was truncated due to length greater than that permitted on the transmission channel.
-	  rd,        %% This may be set in a query and is copied into the response.  If RD is set, it directs the name server to pursue the query recursively.
-	  ra,        %% Is set or cleared in a response, and denotes whether recursive query support is available in the name server.
-	  rcode,     %% Type of the response.
-	  question,  %% The question for the name server.
-	  answer,    %% 'ResourceRecord's answering the question.
-	  authority, %% 'ResourceRecord's pointing toward an authority.
-	  additional %% 'ResourceRecord's holding additional information.
+	  id,        % Assigned by the program that generates queries. This identifier is copied to the corresponding reply and can be used by the requester to match up replies to outstanding queries.
+	  qr,        % Whether this message is a query ('False'), or a response ('True').
+	  opcode,    % Kind of query in this message.  This value is set by the originator of a query and copied into the response.
+	  aa,        % The responding name server is an authority for the domain name in question section.
+	  tc,        % Specifies that this message was truncated due to length greater than that permitted on the transmission channel.
+	  rd,        % This may be set in a query and is copied into the response.  If RD is set, it directs the name server to pursue the query recursively.
+	  ra,        % Is set or cleared in a response, and denotes whether recursive query support is available in the name server.
+	  rcode,     % Type of the response.
+	  question,  % The question for the name server.
+	  answer,    % 'ResourceRecord's answering the question.
+	  authority, % 'ResourceRecord's pointing toward an authority.
+	  additional % 'ResourceRecord's holding additional information.
 	 }).
 
 -record(question, {
-	  qname,
-	  qtype,
-	  qclass
+	  qname, % A domain name represented as a sequence of strings
+	  qtype, % Specifies the type of the query.
+	  qclass % Specifies the class of the query. qclass in means Internet.
 	  }).
 
+-record(resource_record, {
+	  name,  % A domain name to which this resource record pertains.
+	  type,  % This field specifies the meaning of the data in the RDATA field.
+	  class, % Specify the class of the data in the RDATA field.
+	  ttl,   % A 32 bit unsigned integer that specifies the time interval (in seconds) that the resource record may be cached before it should be discarded.  Zero values are interpreted to mean that the RR can only be used for the transaction in progress, and should not be cached.
+	  rdata  % Describes the resource.  The format of this information varies according to the TYPE and CLASS of the resource record. For example, the if the TYPE is A and the CLASS is IN, the RDATA field is a 4 octet ARPA Internet address.
+	 }).
 
 %% @doc Function used by Erlang (compiler?) to ensure that a module implementing gen_dns really is exporting the needed functions.
 %% @private Only Erlang itself should call this function.
 %% @since 0.2
 behaviour_info(callbacks) ->
-    [{init, 1}, %%{daytime, 1}, 
+    [{init, 1}, %{daytime, 1}, 
      {terminate, 2}];
 behaviour_info(_) ->
     undefined.
@@ -252,7 +259,60 @@ parse_resource_records(Count, Body) ->
 
 parse_resource_records(0, Body, RRs) ->
     %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
-    {lists:reverse(RRs), Body}.
+    {lists:reverse(RRs), Body};
+parse_resource_records(Count, Body, RRs) ->
+    {NAME, <<TYPE:16, CLASS:16, TTL:32, RDLENGTH:16, Rest/binary>>} = parse_label(Body),
+    case type_to_atom(TYPE) of
+	a ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	ns -> 
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	md ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	mf ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	cname ->
+	    {RDATA, Rest2} = parse_label(Rest);
+	soa ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	mb ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	mg ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	mr ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	null ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	wks ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	ptr -> 
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	hinfo ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	minfo ->
+	    RDATA = unspecified,
+	    Rest2 = Rest;
+	mx ->
+	    RDATA = unspecified,
+	    Rest2 = Rest
+    end,	    
+    parse_resource_records(Count - 1, Rest2,
+			   [#resource_record{name = NAME, type = type_to_atom(TYPE),
+					     class = class_to_atom(CLASS), ttl = TTL,
+					     rdata = RDATA}|
+			   RRs]).
     
 %% @doc Parse a DNS label.
 %% @private Internal helper function.
@@ -287,8 +347,7 @@ type_to_atom(11) -> wks;
 type_to_atom(12) -> ptr;
 type_to_atom(13) -> hinfo;
 type_to_atom(14) -> minfo;
-type_to_atom(15) -> mx;
-type_to_atom(_) -> unknown.
+type_to_atom(15) -> mx.
 
 %% @doc Turn a numeric DNS qtype into an atom.
 %% @private Internal helper function.
@@ -305,8 +364,7 @@ qtype_to_atom(Type) -> type_to_atom(Type).
 class_to_atom(1) -> in;
 class_to_atom(2) -> cs;
 class_to_atom(3) -> ch;
-class_to_atom(4) -> hs;
-class_to_atom(_) -> unknown.
+class_to_atom(4) -> hs.
 
 %% @doc Turn a numeric DNS qclass into an atom.
 %% @private Internal helper function.
@@ -318,23 +376,20 @@ qclass_to_atom(Class) -> class_to_atom(Class).
 %% @private Internal helper function.
 %% @since 0.2
 qr_to_atom(0) -> query_;
-qr_to_atom(1) -> response;
-qr_to_atom(_) -> unknown.
+qr_to_atom(1) -> response.
 		      
 %% @doc Turn a numeric DNS Opcode into an atom.
 %% @private Internal helper function.
 %% @since 0.2
 opcode_to_atom(0) -> query_;
 opcode_to_atom(1) -> iquery;
-opcode_to_atom(2) -> status;
-opcode_to_atom(_) -> unknown.
+opcode_to_atom(2) -> status.
 
 %% @doc Turn a numeric boolean where 0 is false and 1 is true into an atom.
 %% @private Internal helper function.
 %% @since 0.2
 bool_to_atom(0) -> false;
-bool_to_atom(1) -> true;
-bool_to_atom(_) -> unknown.
+bool_to_atom(1) -> true.
 
 %% @doc Turn a numeric DNS RCODE into an atom.
 %% @private Internal helper function.
@@ -344,16 +399,16 @@ rcode_to_atom(1) -> format_error;
 rcode_to_atom(2) -> server_failure;
 rcode_to_atom(3) -> name_error;
 rcode_to_atom(4) -> not_implemente;
-rcode_to_atom(5) -> refused;
-rcode_to_atom(_) -> unknown.
+rcode_to_atom(5) -> refused.
 
 
-    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tests() ->
     [{"Label parsing", tests_label_parsing()},
      {"Question parsing", tests_question_parsing()},
-%%     {"Resource record parsing", tesst_resource_record_parsing()},
+     {"Resource record parsing", tests_resource_record_parsing()},
      {"Message parsing", tests_message_parsing()}].
 
 -define(C, ["com"]).
@@ -389,7 +444,8 @@ tests_label_parsing() ->
 
 
 tests_question_parsing() ->
-    [{"One question",
+    [{"No question", ?_assert({[], <<>>} == parse_questions(0, <<>>))},
+     {"One question",
       [?_assert({[?C_ALL_IN], <<>>} == parse_questions(1, ?C_ALL_INB)),
        ?_assert({[?C_MX_CS], <<>>} == parse_questions(1, ?C_MX_CSB)),
        ?_assert({[?PC_NS_CH], <<>>} == parse_questions(1, ?PC_NS_CHB)),
@@ -435,8 +491,19 @@ tests_question_parsing() ->
 			       ?PC_NS_CHB/binary, ?PC_SOA_HSB/binary,
 			       ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>))}].
 
+-define(PCB_, <<?PCB/binary, 0>>).
+
 tests_resource_record_parsing() ->
-    [].
+    PCB_L = length(binary_to_list(?PCB_)),
+    [{"No RR", ?_assert({[], <<>>} == parse_resource_records(0, <<>>))},
+     {"One RR", 
+      [?_assert({[#resource_record{name = ?SPC,
+				   type = cname,
+				   class = in,
+				   ttl = 176800,
+				   rdata = ?PC}], <<>>} == 
+		parse_resource_records(1, <<?SPCB/binary, 0:8,  5:16, 1:16, 176800:32, 
+					   PCB_L:16, ?PCB_/binary>>))]}].
 
 tests_message_parsing() ->
     [?_assert(#dns_message{id = 63296, 
