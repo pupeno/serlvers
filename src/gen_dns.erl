@@ -411,38 +411,61 @@ tests() ->
      {"Resource record parsing", tests_resource_record_parsing()},
      {"Message parsing", tests_message_parsing()}].
 
-%% -define(LABELS, [{["com"], <<3, "com">>},
-%% 		 {["pupeno"], <<6, "pupeno">>},
-%% 		 {["software"], <<8, "software">>},
-%% 		 {["packages"], <<8, "packages">>}]).
--define(LABELS, [{["com"], <<3>>},
-		 {["pupeno"], <<6>>},
-		 {["software"], <<8>>},
-		 {["mail"], <<4>>}]).
+-define(LABELS, [{["com"], <<3, "com">>},
+ 		 {["pupeno"], <<6, "pupeno">>},
+ 		 {["software"], <<8, "software">>},
+ 		 {["packages"], <<8, "packages">>}]).
 
-build_domains(Length) ->
-    io:fwrite("~w:build_domains(~p)~n", [?MODULE, Length]),
-    build_domains(?LABELS, Length).
+%% @doc Having a set of labels build all the possible domains from those of length 1 to Length.
+%% @private Internal helper function.
+%% @since 0.2
+build_domains_up_to(Labels, Length) ->
+    build_domains_up_to(Labels, Length, []).
 
+%% @doc Having a set of labels build all the possible domains from those of length 1 to Length apending them to Domains.
+%% @private Internal helper function.
+%% @since 0.2
+build_domains_up_to(_Labels, 0, Domains) -> Domains;
+build_domains_up_to(Labels, Length, Domains) ->
+    build_domains_up_to(Labels, 
+			Length - 1, %% lists:seq
+			lists:append(Domains, build_domains(Labels, Length))). %% ++
+    
+%% @doc Having a set of labels build domains names of N labels.
+%% @private Internal helper function.
+%% @since 0.2
 build_domains(_Labels, 0) ->
-    io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, _Labels, 0]),
+    %io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, _Labels, 0]),
     [];
 build_domains(Labels, 1) ->
-    io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, Labels, 1]),
+    %io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, Labels, 1]),
     Labels;
-build_domains(Labels, 2) ->
-    io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, Labels, 2]),
+build_domains(Labels, N) ->
+    %io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, Labels, 2]),
+    NewLabels = build_domains(Labels, N - 1),
     Comb = fun(Head) ->
-		   one_label_to_many(Head, Labels) end,
+		   one_label_to_many(Head, NewLabels) end,
     lists:flatten(lists:map(Comb, Labels)).
-    
+
+%% @doc Having one label combine it with each label of a list.
+%% @private Internal helper function.
+%% @since 0.2
 one_label_to_many({Parsed, Raw}, Labels) ->
-    io:fwrite("~w:one_with_many(~p, ~p)~n", [?MODULE, {Parsed, Raw}, Labels]),
+    %io:fwrite("~w:one_with_many(~p, ~p)~n", [?MODULE, {Parsed, Raw}, Labels]),
     Comb = fun({Parsed2, Raw2}) -> 
 		   {lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>} end,
     lists:map(Comb, Labels).
 
+tests_label_parsing() ->
+    tests_label_parsing(build_domains_up_to(?LABELS, 5)).
 
+tests_label_parsing([]) -> [];
+tests_label_parsing([{Parsed, Raw}|Data]) ->
+    Noise = list_to_binary(noise()),
+    [?_assert({Parsed, Noise} == parse_label(<<Raw/binary, 0, Noise/binary>>)) |
+     tests_label_parsing(Data)].    
+
+%%%%%%%%%%%%%%%%%% Old boring tests %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 -define(C, ["com"]).
 -define(CB, <<3, "com">>).
@@ -450,38 +473,6 @@ one_label_to_many({Parsed, Raw}, Labels) ->
 -define(PCB, <<6, "pupeno", ?CB/binary>>).
 -define(SPC, ["software"|?PC]).
 -define(SPCB, <<8, "software", ?PCB/binary>>).
-
-%list_of_domains(N) ->
-%    LabelsCount = random:uniform(5).
-
-%% domain(Length) ->
-%%     domain(?DOMAINS, Length).
-%% domain(Labels, Length) ->
-%%     {I1,I2,I3} = erlang:now(),
-%%     random:seed(I1,I2,I3),
-%%     domain(Labels, Length, [], <<>>).
-
-%% domain(_Labels, 0, Parsed, Raw) ->
-%%     {Parsed, <<Raw/binary, 0>>};
-%% domain(Labels, Length, Parsed, Raw) ->
-%%     {NewParsed, NewRaw} = one_of(Labels),
-%%     io:fwrite("NewParsed = ~w, NewRaw = ~w~n", [NewParsed, NewRaw]),
-%%     domain(Labels, Length - 1, [NewParsed|Parsed], <<NewRaw/binary, Raw/binary>>).
-    
-
-tests_label_parsing() ->
-    Data = [{?C, ?CB}, {?PC, ?PCB}, {?SPC, ?SPCB}],
-    tests_label_parsing(1000, Data).
-
-tests_label_parsing(0, _Data) ->
-    [];
-tests_label_parsing(Count, Data) ->
-    {Parsed, Raw} = one_of(Data),
-    Noise = list_to_binary(noise()),
-    [?_assert({Parsed, Noise} == parse_label(<<Raw/binary, 0, Noise/binary>>)) |
-     tests_label_parsing(Count-1, Data)].
-    
-
 -define(C_ALL_IN, #question{qname = ?C, qtype = all, qclass = in}).
 -define(C_ALL_INB, <<?CB/binary, 0, 255:16, 1:16>>).
 -define(C_MX_CS, #question{qname = ?C, qtype = mx, qclass = cs}).
