@@ -1,0 +1,2 @@
+- Add signatures to all the return values of the parsing functions of messages.
+- Document the signature of all functions.

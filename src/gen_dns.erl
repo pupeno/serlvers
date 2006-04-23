@@ -411,6 +411,9 @@ tests() ->
      {"Resource record parsing", tests_resource_record_parsing()},
      {"Message parsing", tests_message_parsing()}].
 
+-define(DOMAINS, [{["com"], <<3, "com">>},
+		  {["pupeno"], <<6, "pupeno">>},
+		  {["software"], <<8, "software">>}]).
 -define(C, ["com"]).
 -define(CB, <<3, "com">>).
 -define(PC, ["pupeno"|?C]).
@@ -418,16 +421,36 @@ tests() ->
 -define(SPC, ["software"|?PC]).
 -define(SPCB, <<8, "software", ?PCB/binary>>).
 
+%list_of_domains(N) ->
+%    LabelsCount = random:uniform(5).
+
+domain(N) ->
+    domain(?DOMAINS, N).
+domain(Labels, N) ->
+    {I1,I2,I3} = erlang:now(),
+    random:seed(I1,I2,I3),
+    domain(Labels, N, [], <<>>).
+
+domain(_Labels, 0, Parsed, Raw) ->
+    {Parsed, <<Raw/binary, 0>>};
+domain(Labels, N, Parsed, Raw) ->
+    {NewParsed, NewRaw} = one_of(Labels),
+    io:fwrite("NewParsed = ~w, NewRaw = ~w~n", [NewParsed, NewRaw]),
+    domain(Labels, N - 1, [NewParsed|Parsed], <<NewRaw/binary, Raw/binary>>).
+    
+
 tests_label_parsing() ->
-    [{"com", ?_assert({?C, <<>>} == parse_label(<<?CB/binary, 0>>))},
-     {"pupeno.com", ?_assert({?PC, <<>>} == parse_label(<<?PCB/binary, 0>>))},
-     {"software.pupeno.com", ?_assert({?SPC, <<>>} == parse_label(<<?SPCB/binary, 0>>))},
-     {"com+", ?_assert({?C, <<"trailing trash">>} == 
-		       parse_label(<<?CB/binary, 0, "trailing trash">>))},
-     {"pupeno.com+", ?_assert({?PC, <<"whatever">>} == 
-			      parse_label(<<?PCB/binary, 0, "whatever">>))},
-     {"software.pupeno.com+", ?_assert({?SPC, <<"who cares ?">>} == 
-				       parse_label(<<?SPCB/binary, 0, "who cares ?">>))}].
+    Data = [{?C, ?CB}, {?PC, ?PCB}, {?SPC, ?SPCB}],
+    tests_label_parsing(1000, Data).
+
+tests_label_parsing(0, _Data) ->
+    [];
+tests_label_parsing(Count, Data) ->
+    {Parsed, Raw} = one_of(Data),
+    Noise = list_to_binary(noise()),
+    [?_assert({Parsed, Noise} == parse_label(<<Raw/binary, 0, Noise/binary>>)) |
+     tests_label_parsing(Count-1, Data)].
+    
 
 -define(C_ALL_IN, #question{qname = ?C, qtype = all, qclass = in}).
 -define(C_ALL_INB, <<?CB/binary, 0, 255:16, 1:16>>).
@@ -503,6 +526,13 @@ tests_resource_record_parsing() ->
 				   ttl = 176800,
 				   rdata = ?PC}], <<>>} == 
 		parse_resource_records(1, <<?SPCB/binary, 0:8,  5:16, 1:16, 176800:32, 
+					   PCB_L:16, ?PCB_/binary>>)),
+       ?_assert({[#resource_record{name = ?SPC,
+				   type = cname,
+				   class = in,
+				   ttl = 176800,
+				   rdata = ?PC}], <<>>} == 
+		parse_resource_records(1, <<?SPCB/binary, 0:8,  5:16, 1:16, 176800:32, 
 					   PCB_L:16, ?PCB_/binary>>))]}].
 
 tests_message_parsing() ->
@@ -568,3 +598,24 @@ tests_message_parsing() ->
 
 test() ->
     eunit:test(tests()).
+
+%% @doc Return one random item out of a list.
+%% @private Internal helper function.
+%% @since 0.2
+one_of(L) ->
+    %io:fwrite("~w:one_of(~w)~n", [?MODULE, L]),
+    lists:nth(random:uniform(length(L)), L).
+
+%% @doc Generate some noise, that is a list of random length (less than 15) with random data.
+%%      The porpuse is to insert data in places where the system should not look at.
+%% @private Internal helper function.
+%% @since 0.2
+noise() ->
+    {I1,I2,I3} = erlang:now(),
+    random:seed(I1,I2,I3),
+    noise(random:uniform(15) - 1).
+
+noise(0) -> [];
+noise(Max) ->
+    [random:uniform(256) - 1 | 
+     noise(Max - 1)].
