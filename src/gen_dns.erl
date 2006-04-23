@@ -180,16 +180,14 @@ handle_info({connected, Socket}, {Module, ModState}) ->
 handle_info({udp, Socket, IP, InPortNo, Packet}, {Module, ModState}) -> % Handle UDP packages.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, Packet} , {Module, ModState}]),
     %%{Reply, NewModState} = Module:dns(ModState), % Generate the reply.
-    %%gen_udp:send(Socket, IP, InPortNo, Reply),       % Send the reply.
-    %%ok = inet:setopts(Socket, [{active, once}]),     % Enable receiving of packages, get the next one.
-    Query = parse_message(list_to_binary(Packet)),
-    io:fwrite("Query = ~w.~n", [Query]),
+    Message = parse_message(list_to_binary(Packet)),
+    io:fwrite("Message = ~w.~n", [Message]),
     gen_udp:send(Socket, IP, InPortNo, "huhuhuhuhuhuhuhuhuhuhuhuhuhuhuhuhuhu"),
     {stop, normal, {Module, ModState}};
 handle_info({tcp, Socket, Data}, {Module, ModState}) -> % Handle TCP queries.
     io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {tcp, Socket, Data} , {Module, ModState}]),
-    Query = parse_message(list_to_binary(Data)),
-    io:fwrite("Query = ~w.~n", [Query]),
+    Message = parse_message(list_to_binary(Data)),
+    io:fwrite("Message = ~w.~n", [Message]),
     gen_tcp:send(Socket, "caca"),
     {stop, normal, {Module, ModState}};
 handle_info(_Info, State) ->
@@ -215,11 +213,11 @@ code_change(_OldVsn, State, _Extra) ->
 %% @private Internal helper function.
 %% @since 0.2
 parse_message(RawMsg) ->
-    io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
+    %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
     <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, 
      ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
-    io:fwrite("QDCOUNT = ~w, ANCOUNT = ~w, NSCOUNT = ~w, ARCOUNT = ~w, Body = ~w~n",
-	      [QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT, Body]),
+    %%io:fwrite("QDCOUNT = ~w, ANCOUNT = ~w, NSCOUNT = ~w, ARCOUNT = ~w, Body = ~w~n",
+	%%      [QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT, Body]),
     {Questions, Rest} = parse_questions(QDCOUNT, Body),
     {Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
     {Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
@@ -236,7 +234,6 @@ parse_message(RawMsg) ->
 		       answer = Answer,
 		       authority = Authority,
 		       additional = Additional},
-    io:fwrite("DNS Message = ~p.~n", [Msg]),
     Msg.
 
 %% @doc Parse the query section of a DNS message.
@@ -264,11 +261,11 @@ parse_questions(Count, Body, Questions) ->
 %% @private Internal helper function.
 %% @since 0.2
 parse_resource_records(Count, Body) ->
-    io:fwrite("~w:parse_resource_records(~w, ~w)~n", [?MODULE, Count, Body]),
+    %%io:fwrite("~w:parse_resource_records(~w, ~w)~n", [?MODULE, Count, Body]),
     parse_resource_records(Count, Body, []).
 
 parse_resource_records(0, Body, RRs) ->
-    io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
+    %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
     {lists:reverse(RRs), Body}.
     
 %% @doc Parse a DNS label.
@@ -373,9 +370,9 @@ rcode_to_atom(_) -> unknown.
 %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
 tests() ->
     [{"Label parsing", tests_label_parsing()},
-     {"Question parsing", tests_question_parsing()}]. %%,
-%%     {"Resource record parsing", test_resource_record_parsing()},
-%%     {"Message parsing", test_message_parsing}].
+     {"Question parsing", tests_question_parsing()},
+%%     {"Resource record parsing", tesst_resource_record_parsing()},
+     {"Message parsing", tests_message_parsing()}].
 
 -define(C, ["com"]).
 -define(CB, <<3, "com">>).
@@ -456,11 +453,23 @@ tests_question_parsing() ->
 			       ?PC_NS_CHB/binary, ?PC_SOA_HSB/binary,
 			       ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>))}].
 
-test_resource_record_parsing() ->
+tests_resource_record_parsing() ->
     [].
 
-test_message_parsing() ->
-    [].
+tests_message_parsing() ->
+    [?_assert(#dns_message{id = 63296, 
+			   qr = qr_to_atom(0),
+			   opcode = opcode_to_atom(0),
+			   aa = bool_to_atom(0),
+			   tc = bool_to_atom(0),
+			   rd = bool_to_atom(1),
+			   ra = bool_to_atom(0),
+			   rcode = rcode_to_atom(0),
+			   question = [],
+			   answer = [],
+			   authority = [],
+			   additional = []} ==
+	     parse_message(<<63296:16, 0:1, 0:4, 0:1, 0:1, 1:1, 0:1, 0:3, 0:4, 0:16, 0:16, 0:16, 0:16>>))].
 
 test() ->
     eunit:test(tests()).
