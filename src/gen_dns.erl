@@ -427,31 +427,31 @@ build_domains_up_to(Labels, Length) ->
 %% @doc Having a set of labels build domains names of N labels.
 %% @private Internal helper function.
 %% @since 0.2
-build_domains(_Labels, 0) ->
-    %io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, _Labels, 0]),
-    [];
-build_domains(Labels, 1) ->
-    %io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, Labels, 1]),
-    Labels;
+build_domains(_Labels, 0) -> [];
+build_domains(Labels, 1) -> Labels;
 build_domains(Labels, N) ->
-    %io:fwrite("~w:build_domains(~p, ~p)~n", [?MODULE, Labels, 2]),
     NewLabels = build_domains(Labels, N - 1),
-    Comb = fun(Head) ->
-		   one_label_to_many(Head, NewLabels) end,
+    Comb = fun(Head) ->                        % Function to combine one label to NewLabels.
+		   one_label_to_many(Head, NewLabels) end, 
     lists:flatten(lists:map(Comb, Labels)).
 
 %% @doc Having one label combine it with each label of a list.
 %% @private Internal helper function.
 %% @since 0.2
 one_label_to_many({Parsed, Raw}, Labels) ->
-    %io:fwrite("~w:one_with_many(~p, ~p)~n", [?MODULE, {Parsed, Raw}, Labels]),
-    Comb = fun({Parsed2, Raw2}) -> 
+    Comb = fun({Parsed2, Raw2}) ->           % Function to combine two Labels (parsed and raw).
 		   {lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>} end,
     lists:map(Comb, Labels).
 
+%% @doc Generate tests with all the different combinations of labels.
+%% @private Internal helper function.
+%% @since 0.2
 tests_label_parsing() ->
     tests_label_parsing(build_domains_up_to(?LABELS, 5)).
 
+%% @doc Generate tests with all the different combinations of labels.
+%% @private Internal helper function.
+%% @since 0.2
 tests_label_parsing([]) -> [];
 tests_label_parsing([{Parsed, Raw}|Data]) ->
     Noise = list_to_binary(noise()),
