@@ -34,7 +34,7 @@
 %% @doc Structure defining a DNS message. It is based on what is defined on RFC1035 <http://www.ietf.org/rfc/rfc1035.txt> but it has been re-arranged for easy of use and some fields than are not needed where removed (the counts, which can be calculated out of the length of the lists).
 %% @since 0.2
 -record(dns_message, {
-	  id,        %% Assigned by the program that generates queries.  This identifier is copied to the corresponding reply and can be used by the requester to match up replies to outstanding queries.
+	  id,        %% Assigned by the program that generates queries. This identifier is copied to the corresponding reply and can be used by the requester to match up replies to outstanding queries.
 	  qr,        %% Whether this message is a query ('False'), or a response ('True').
 	  opcode,    %% Kind of query in this message.  This value is set by the originator of a query and copied into the response.
 	  aa,        %% The responding name server is an authority for the domain name in question section.
@@ -216,12 +216,14 @@ code_change(_OldVsn, State, _Extra) ->
 %% @since 0.2
 parse_message(RawMsg) ->
     io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
-    <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
-    io:fwrite("QDCOUNT = ~w, ANCOUNT = ~w, NSCOUNT = ~w, ARCOUNT = ~w, Body = ~w~n", [QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT, Body]),
+    <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, 
+     ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
+    io:fwrite("QDCOUNT = ~w, ANCOUNT = ~w, NSCOUNT = ~w, ARCOUNT = ~w, Body = ~w~n",
+	      [QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT, Body]),
     {Questions, Rest} = parse_questions(QDCOUNT, Body),
     {Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
     {Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
-    {Additional, _} = parse_resource_records(ARCOUNT, Rest3),
+    {Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
     Msg = #dns_message{id = ID, 
 		       qr = qr_to_atom(QR),
 		       opcode = opcode_to_atom(Opcode),
@@ -250,7 +252,8 @@ parse_questions(0, Body, Questions) ->
 parse_questions(Count, Body, Questions) ->
     %%io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, Count, Body, Questions]),
     {QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} = parse_label(Body),
-    %%io:fwrite("QNAME = ~p, QTYPE = ~p, QCLASS = ~p~n", [QNAME, qtype_to_atom(QTYPE), qclass_to_atom(QCLASS)]),
+    %%io:fwrite("QNAME = ~p, QTYPE = ~p, QCLASS = ~p~n", 
+    %%          [QNAME, qtype_to_atom(QTYPE), qclass_to_atom(QCLASS)]),
     parse_questions(Count - 1, Rest,
 		    [#question{qname = QNAME, 
 			       qtype = qtype_to_atom(QTYPE),
@@ -385,9 +388,12 @@ tests_label_parsing() ->
     [{"com", ?_assert({?C, <<>>} == parse_label(<<?CB/binary, 0>>))},
      {"pupeno.com", ?_assert({?PC, <<>>} == parse_label(<<?PCB/binary, 0>>))},
      {"software.pupeno.com", ?_assert({?SPC, <<>>} == parse_label(<<?SPCB/binary, 0>>))},
-     {"com+", ?_assert({?C, <<"trailing trash">>} == parse_label(<<?CB/binary, 0, "trailing trash">>))},
-     {"pupeno.com+", ?_assert({?PC, <<"whatever">>} == parse_label(<<?PCB/binary, 0, "whatever">>))},
-     {"software.pupeno.com+", ?_assert({?SPC, <<"who cares ?">>} == parse_label(<<?SPCB/binary, 0, "who cares ?">>))}].
+     {"com+", ?_assert({?C, <<"trailing trash">>} == 
+		       parse_label(<<?CB/binary, 0, "trailing trash">>))},
+     {"pupeno.com+", ?_assert({?PC, <<"whatever">>} == 
+			      parse_label(<<?PCB/binary, 0, "whatever">>))},
+     {"software.pupeno.com+", ?_assert({?SPC, <<"who cares ?">>} == 
+				       parse_label(<<?SPCB/binary, 0, "who cares ?">>))}].
 
 -define(C_ALL_IN, #question{qname = ?C, qtype = all, qclass = in}).
 -define(C_ALL_INB, <<?CB/binary, 0, 255:16, 1:16>>).
@@ -426,22 +432,30 @@ tests_question_parsing() ->
 		parse_questions(2, <<?SPC_PTR_INB/binary, ?C_ALL_INB/binary>>))]},
      {"Three questions",
       [?_assert({[?C_ALL_IN, ?C_MX_CS, ?PC_NS_CH], <<>>} == 
-		parse_questions(3, <<?C_ALL_INB/binary, ?C_MX_CSB/binary, ?PC_NS_CHB/binary>>)),
+		parse_questions(3, <<?C_ALL_INB/binary, ?C_MX_CSB/binary, 
+				    ?PC_NS_CHB/binary>>)),
        ?_assert({[?C_MX_CS, ?PC_NS_CH, ?PC_SOA_HS], <<>>} == 
-		parse_questions(3, <<?C_MX_CSB/binary, ?PC_NS_CHB/binary, ?PC_SOA_HSB/binary>>)),
+		parse_questions(3, <<?C_MX_CSB/binary, ?PC_NS_CHB/binary, 
+				    ?PC_SOA_HSB/binary>>)),
        ?_assert({[?PC_NS_CH, ?PC_SOA_HS, ?SPC_A_ANY], <<>>} == 
-		parse_questions(3, <<?PC_NS_CHB/binary, ?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary>>)),
+		parse_questions(3, <<?PC_NS_CHB/binary, ?PC_SOA_HSB/binary, 
+				    ?SPC_A_ANYB/binary>>)),
        ?_assert({[?PC_SOA_HS, ?SPC_A_ANY, ?SPC_PTR_IN], <<>>} == 
-		parse_questions(3, <<?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>)),
+		parse_questions(3, <<?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary, 
+				    ?SPC_PTR_INB/binary>>)),
        ?_assert({[?SPC_A_ANY, ?SPC_PTR_IN, ?C_ALL_IN], <<>>} == 
-		parse_questions(3, <<?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary, ?C_ALL_INB/binary>>)),
+		parse_questions(3, <<?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary, 
+				    ?C_ALL_INB/binary>>)),
        ?_assert({[?SPC_PTR_IN, ?C_ALL_IN, ?C_MX_CS], <<>>} == 
-		parse_questions(3, <<?SPC_PTR_INB/binary, ?C_ALL_INB/binary, ?C_MX_CSB/binary>>))]},
+		parse_questions(3, <<?SPC_PTR_INB/binary, ?C_ALL_INB/binary, 
+				    ?C_MX_CSB/binary>>))]},
     {"Six questions",
      ?_assert({[?C_ALL_IN, ?C_MX_CS, ?PC_NS_CH, ?PC_SOA_HS, ?SPC_A_ANY, ?SPC_PTR_IN], <<>>} == 
 	      parse_questions(6,
-			      <<?C_ALL_INB/binary, ?C_MX_CSB/binary, ?PC_NS_CHB/binary,
-			       ?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>))}].
+			      <<?C_ALL_INB/binary, ?C_MX_CSB/binary, 
+			       ?PC_NS_CHB/binary, ?PC_SOA_HSB/binary,
+			       ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>))}].
+
 test_resource_record_parsing() ->
     [].
 
