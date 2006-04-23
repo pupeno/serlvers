@@ -420,16 +420,9 @@ tests() ->
 %% @private Internal helper function.
 %% @since 0.2
 build_domains_up_to(Labels, Length) ->
-    build_domains_up_to(Labels, Length, []).
-
-%% @doc Having a set of labels build all the possible domains from those of length 1 to Length apending them to Domains.
-%% @private Internal helper function.
-%% @since 0.2
-build_domains_up_to(_Labels, 0, Domains) -> Domains;
-build_domains_up_to(Labels, Length, Domains) ->
-    build_domains_up_to(Labels, 
-			Length - 1, %% lists:seq
-			lists:append(Domains, build_domains(Labels, Length))). %% ++
+    lists:foldl(fun(N, Domains) -> Domains ++ build_domains(Labels, N) end,
+		[],
+		lists:seq(1,Length)).
     
 %% @doc Having a set of labels build domains names of N labels.
 %% @private Internal helper function.
