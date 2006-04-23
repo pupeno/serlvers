@@ -409,16 +409,22 @@ rcode_to_atom(5) -> refused.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tests() ->
     [{"Label parsing", tests_label_parsing()},
-     {"Question parsing", tests_question_parsing()}].%,
+     {"Wrong label parsing", tests_wrong_label_parsing()}].
+     %{"Question parsing", tests_question_parsing()}].%,
      %{"Resource record parsing", tests_resource_record_parsing()},
      %{"Message parsing", tests_message_parsing()}].
 
 %% Some labels (atoms of domain names) to test the parser.
 -define(LABELS, [{["com"], <<3, "com">>},
-% 		 {["pupeno"], <<6, "pupeno">>},
-% 		 {["software"], <<8, "software">>},
-% 		 {["packages"], <<8, "packages">>},
+ 		 {["pupeno"], <<6, "pupeno">>},
+ 		 {["software"], <<8, "software">>},
+ 		 {["packages"], <<8, "packages">>},
 		 {["mail"], <<4, "mail">>}]).
+-define(WRONGLABELS, [{["com"], <<2, "com">>},
+		      {["pupeno"], <<7, "pupeno">>},
+		      {["software"], <<2, "software">>},
+		      {["packages"], <<4, "packages">>},
+		      {["mail"], <<5, "mail">>}]).
 
 %% @doc Having a set of labels build all the possible domains from those of length 1 to Length.
 %% @private Internal helper function.
@@ -459,11 +465,29 @@ tests_label_parsing() ->
 tests_label_parsing([]) -> [];
 tests_label_parsing([{Parsed, Raw}|Data]) ->
     Noise = list_to_binary(noise()),
-    CRaw = <<Raw/binary, 0, Noise/binary>>, % Complete RAW domain.
-    CParsed = {label, {Parsed, Noise}},     % Complete PARSED domain.
-    ParsedToTest = parse_label(CRaw),       % Perform the parsing.
+    CRaw = <<Raw/binary, 0, Noise/binary>>,   % Complete RAW domain.
+    CParsed = {label, {Parsed, Noise}},       % Complete PARSED domain.
+    ParsedToTest = (catch parse_label(CRaw)), % Perform the parsing.
     Desc = lists:flatten(io_lib:format("~p -> ~p, ~p", [CRaw, CParsed, ParsedToTest])),
     [{Desc, ?_assert(CParsed == ParsedToTest)} | tests_label_parsing(Data)].    
+
+%% @doc Generate tests with all the different combinations of labels.
+%% @private Internal helper function.
+%% @since 0.2
+tests_wrong_label_parsing() ->
+    tests_wrong_label_parsing(build_domains_up_to(?WRONGLABELS, 5)).
+
+%% @doc Generate tests with all the different combinations of labels.
+%% @private Internal helper function.
+%% @since 0.2
+tests_wrong_label_parsing([]) -> [];
+tests_wrong_label_parsing([{_Parsed, Raw}|Data]) ->
+    Noise = list_to_binary(noise()),
+    CRaw = <<Raw/binary, 0, Noise/binary>>,   % Complete RAW domain.
+    CParsed = {error, invalid_label},         % Complete PARSED domain.
+    ParsedToTest = (catch parse_label(CRaw)), % Perform the parsing.
+    Desc = lists:flatten(io_lib:format("~p -> ~p, ~p", [CRaw, CParsed, ParsedToTest])),
+    [{Desc, ?_assert(CParsed == ParsedToTest)} | tests_wrong_label_parsing(Data)].
 
 %% DNS Types to test the parser.
 -define(TYPES, [{a,     << 1:16>>},
