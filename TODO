@@ -1,2 +1,3 @@
 - Add signatures to all the return values of the parsing functions of messages.
 - Document the signature of all functions.
+- Make the DNS testing cases more corner (labels of minimun and maximum length, domains of minimum and maximun length).
