@@ -24,7 +24,7 @@
 -export([init/1, handle_call/3,  handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([behaviour_info/1]).
 
--export([test/0, tests/0]).
+-export([test/1, tests/1]).
 
 -compile(export_all).
 
@@ -241,14 +241,18 @@ parse_questions(Count, Body) ->
 
 parse_questions(0, Body, Questions) ->
     %%io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, 0, Body, Questions]),
-    {lists:reverse(Questions), Body};
+    {questions, lists:reverse(Questions), Body};
 parse_questions(Count, Body, Questions) ->
     %%io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, Count, Body, Questions]),
-    {label, {QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>}} = parse_domain(Body),
-    parse_questions(Count - 1, Rest,
-		    [#question{qname = QNAME, qtype = qtype_to_atom(QTYPE),
-			       qclass = qclass_to_atom(QCLASS)}|
-		     Questions]).
+    case parse_domain(Body) of
+	{domain, QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} ->
+	    parse_questions(Count - 1, Rest,
+			    [#question{qname = QNAME, qtype = qtype_to_atom(QTYPE),
+				       qclass = qclass_to_atom(QCLASS)}|
+			     Questions]);
+	{error, invalid} ->
+	    {error, invalid}
+    end.
 
 %% @doc Parse the resource records.
 %% @private Internal helper function.
@@ -407,9 +411,12 @@ rcode_to_atom(5) -> refused.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-tests() ->
-    [{"Domain parsing", tests_domain_parsing()}].%,
-     %{"Question parsing", tests_question_parsing()}].%,
+test(N) ->
+    eunit:test(tests(N)).
+
+tests(N) ->
+    [{"Domain parsing", tests_domain_parsing(N)},
+     {"Question parsing", tests_question_parsing(N)}].%,
      %{"Resource record parsing", tests_resource_record_parsing()},
      %{"Message parsing", tests_message_parsing()}].
 
@@ -417,14 +424,10 @@ tests() ->
 
 %% Some labels (atoms of domain names) to test the parser.
 -define(LABELS, [{correct, ["com"], <<3, "com">>},
- 		 %{correct, ["pupeno"], <<6, "pupeno">>},
- 		 %{correct,["software"], <<8, "software">>},
- 		 %{correct,["packages"], <<8, "packages">>},
+ 		 {correct, ["s"], <<1, "s">>},
+ 		 {correct,["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"],
+		  <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
 		 {correct,["mail"], <<4, "mail">>},
-		 %{error, ["com"], <<2, "com">>},
-		 %{error, ["pupeno"], <<7, "pupeno">>},
-		 %{error, ["software"], <<2, "software">>},
-		 %{error, ["packages"], <<4, "packages">>},
 		 {error, ["mail"], <<5, "mail">>}]).
 
 %% DNS Types to test the parser.
@@ -465,14 +468,14 @@ tests() ->
 %% @doc Generate tests with all the different combinations of domains.
 %% @private Internal helper function.
 %% @since 0.2
-tests_domain_parsing() ->
-    tests_domain_parsing(build_domains_up_to(?LABELS, 2)).
+tests_domain_parsing(N) ->
+    tests_domain_parsing_(build_domains_up_to(?LABELS, N)).
 
 %% @doc Generate tests with all the different combinations of domains.
 %% @private Internal helper function.
 %% @since 0.2
-tests_domain_parsing([]) -> [];
-tests_domain_parsing([{Type, Parsed, Raw}|Data]) ->
+tests_domain_parsing_([]) -> [];
+tests_domain_parsing_([{Type, Parsed, Raw}|Domains]) ->
     Noise = list_to_binary(noise()),
     CRaw = <<Raw/binary, 0, Noise/binary>>,      % Complete RAW domain.
     CRightParsed = {domain, Parsed, Noise},      % What would be returned if parsing succeds.
@@ -482,28 +485,34 @@ tests_domain_parsing([{Type, Parsed, Raw}|Data]) ->
     case Type of   % What kind of test is it ?
 	correct ->
 	    [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
-	     tests_domain_parsing(Data)];
+	     tests_domain_parsing_(Domains)];
 	error   -> 
-	    CParsed = {error, invalid},
-	    [{Desc, ?_assert((ParsedToTest == CParsed) or       % We should get an error
-			     (ParsedToTest /= CRightParsed))} | % or plain wrong data (not an exception).
-	     tests_domain_parsing(Data)]
+	    [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
+			     (ParsedToTest /= CRightParsed))} |    % or plain wrong data (not an exception).
+	     tests_domain_parsing_(Domains)]
     end.
 
-tests_question_parsing() ->
-    tests_question_parsing(
+tests_question_parsing(N) ->
+    tests_question_parsing_(
       build_questions(
-	build_domains_up_to(?LABELS, 2))).
+	build_domains_up_to(?LABELS, N))).
 
-tests_question_parsing([]) -> [];
-tests_question_parsing([{Type, Count, Parsed, Raw}|Questions]) ->
+tests_question_parsing_([]) -> [];
+tests_question_parsing_([{Type, Count, Parsed, Raw}|Questions]) ->
     Noise = <<>>, % list_to_binary(noise()),
-    CRightParsed = {questions, {Parsed, Noise}},
+    CRightParsed = {questions, Parsed, Noise},
     ParsedToTest = (catch parse_questions(Count, <<Raw/binary, Noise/binary>>)),
-    Desc = lists:flatten(io_lib:format("~p, ~p", % Some useful description
-				       [Type, CRightParsed])),
-    [{Desc, ?_assert({Parsed, Noise} == ParsedToTest)} |
-     tests_question_parsing(Questions)].
+    Desc = lists:flatten(io_lib:format("~nQuestion: ~p~nParsedToTest: ~p~nCRightParsed: ~p~n", % Some useful description
+				       [{Type, Count, Parsed, Raw}, ParsedToTest, CRightParsed])),
+    case Type of
+	correct ->
+	    [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
+	     tests_question_parsing_(Questions)];
+	error ->
+	    [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
+			     (ParsedToTest /= CRightParsed))} |    % or plain wrong data (not an exception).
+	     tests_question_parsing_(Questions)]
+    end.
 
 %%% Helper testing functions.
 
@@ -523,13 +532,13 @@ build_domains(Labels, 1) -> Labels;
 build_domains(Labels, N) ->
     NewLabels = build_domains(Labels, N - 1),
     Comb = fun(Head) ->                        % Function to combine one label to NewLabels.
-		   one_label_to_many(Head, NewLabels) end, 
+		   one_label_per_domain(Head, NewLabels) end, 
     lists:flatten(lists:map(Comb, Labels)).
 
 %% @doc Having one label combine it with each domain of a list.
 %% @private Internal helper function.
 %% @since 0.2
-one_label_to_many({Type, Parsed, Raw}, Domains) ->
+one_label_per_domain({Type, Parsed, Raw}, Domains) ->
     Comb = fun({Type2, Parsed2, Raw2}) ->  % Function to combine two Labels (parsed and raw).
 		   if (Type == correct) and (Type2 == correct) ->
 			   {correct, lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>};
@@ -700,9 +709,6 @@ tests_message_parsing() ->
 			    6:16, 0:16, 0:16, 0:16, ?C_ALL_INB/binary, ?C_MX_CSB/binary, 
 			    ?PC_NS_CHB/binary, ?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary,
 			    ?SPC_PTR_INB/binary>>))].
-
-test() ->
-    eunit:test(tests()).
 
 %% @doc Return one random item out of a list.
 %% @private Internal helper function.
