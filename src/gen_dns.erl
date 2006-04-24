@@ -327,7 +327,7 @@ parse_domain(Labels, <<Length:8, Rest/binary>>) when Length > 0 ->
 	    {error, invalid}
     end;
 parse_domain(Labels, <<Length:8, Rest/binary>>) when Length == 0 ->
-    {domain, {lists:reverse(Labels), Rest}};
+    {domain, lists:reverse(Labels), Rest};
 parse_domain(_Labels, _Body) ->
     {error, invalid}.
 
@@ -408,10 +408,12 @@ rcode_to_atom(5) -> refused.
 %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tests() ->
-    [{"Domain parsing", tests_domain_parsing()},
-     {"Question parsing", tests_question_parsing()}].%,
+    [{"Domain parsing", tests_domain_parsing()}].%,
+     %{"Question parsing", tests_question_parsing()}].%,
      %{"Resource record parsing", tests_resource_record_parsing()},
      %{"Message parsing", tests_message_parsing()}].
+
+%%% Testing data
 
 %% Some labels (atoms of domain names) to test the parser.
 -define(LABELS, [{correct, ["com"], <<3, "com">>},
@@ -419,11 +421,91 @@ tests() ->
  		 %{correct,["software"], <<8, "software">>},
  		 %{correct,["packages"], <<8, "packages">>},
 		 {correct,["mail"], <<4, "mail">>},
-		 {error, ["com"], <<2, "com">>},
+		 %{error, ["com"], <<2, "com">>},
 		 %{error, ["pupeno"], <<7, "pupeno">>},
 		 %{error, ["software"], <<2, "software">>},
 		 %{error, ["packages"], <<4, "packages">>},
 		 {error, ["mail"], <<5, "mail">>}]).
+
+%% DNS Types to test the parser.
+-define(TYPES, [{a,     << 1:16>>},
+		{ns,    << 2:16>>},
+		{md,    << 3:16>>},
+		{mf,    << 4:16>>},
+		{cname, << 5:16>>},
+		{soa,   << 6:16>>},
+		{mb,    << 7:16>>},
+		{mg,    << 8:16>>},
+		{mr,    << 9:16>>},
+		{null,  <<10:16>>},
+		{wks,   <<11:16>>},
+		{ptr,   <<12:16>>},
+		{hinfo, <<13:16>>},
+		{minfo, <<14:16>>},
+		{mx,    <<15:16>>},
+		{txt,   <<16:16>>}]).
+
+%% DNS QTypes to test the parser.
+-define(QTYPES, [{axfr,  <<252:16>>},
+		 {mailb, <<253:16>>},
+		 {maila, <<254:16>>},
+		 {all,   <255:16>>}] ++ ?TYPES).
+
+%% DNS Classes to test the parser.
+-define(CLASS, [{in, <<1:16>>},
+		{cs, <<2:16>>},
+		{ch, <<3:16>>},
+		{hs, <<4:16>>}]).
+
+%% DNS QClasses to test the parser.
+-define(QCLASS, [{any, <<255:16>>}] ++ ?CLASS).
+
+%%% Testing functions.
+
+%% @doc Generate tests with all the different combinations of domains.
+%% @private Internal helper function.
+%% @since 0.2
+tests_domain_parsing() ->
+    tests_domain_parsing(build_domains_up_to(?LABELS, 2)).
+
+%% @doc Generate tests with all the different combinations of domains.
+%% @private Internal helper function.
+%% @since 0.2
+tests_domain_parsing([]) -> [];
+tests_domain_parsing([{Type, Parsed, Raw}|Data]) ->
+    Noise = list_to_binary(noise()),
+    CRaw = <<Raw/binary, 0, Noise/binary>>,      % Complete RAW domain.
+    CRightParsed = {domain, Parsed, Noise},      % What would be returned if parsing succeds.
+    ParsedToTest = (catch parse_domain(CRaw)),   % Perform the parsing.
+    Desc = lists:flatten(io_lib:format("~p, ~p", % Some useful description
+				       [Type, CRightParsed])),
+    case Type of   % What kind of test is it ?
+	correct ->
+	    [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
+	     tests_domain_parsing(Data)];
+	error   -> 
+	    CParsed = {error, invalid},
+	    [{Desc, ?_assert((ParsedToTest == CParsed) or       % We should get an error
+			     (ParsedToTest /= CRightParsed))} | % or plain wrong data (not an exception).
+	     tests_domain_parsing(Data)]
+    end.
+
+tests_question_parsing() ->
+    tests_question_parsing(
+      build_questions(
+	build_domains_up_to(?LABELS, 2))).
+
+tests_question_parsing([]) -> [];
+tests_question_parsing([{Type, Count, Parsed, Raw}|Questions]) ->
+    Noise = <<>>, % list_to_binary(noise()),
+    CRightParsed = {questions, {Parsed, Noise}},
+    ParsedToTest = (catch parse_questions(Count, <<Raw/binary, Noise/binary>>)),
+    Desc = lists:flatten(io_lib:format("~p, ~p", % Some useful description
+				       [Type, CRightParsed])),
+    [{Desc, ?_assert({Parsed, Noise} == ParsedToTest)} |
+     tests_question_parsing(Questions)].
+
+%%% Helper testing functions.
 
 %% @doc Having a set of labels build all the possible domains from those of length 1 to Length.
 %% @private Internal helper function.
@@ -457,81 +539,12 @@ one_label_to_many({Type, Parsed, Raw}, Domains) ->
 	   end,
     lists:map(Comb, Domains).
 
-%% @doc Generate tests with all the different combinations of domains.
-%% @private Internal helper function.
-%% @since 0.2
-tests_domain_parsing() ->
-    tests_domain_parsing(build_domains_up_to(?LABELS, 5)).
-
-%% @doc Generate tests with all the different combinations of domains.
-%% @private Internal helper function.
-%% @since 0.2
-tests_domain_parsing([]) -> [];
-tests_domain_parsing([{Type, Parsed, Raw}|Data]) ->
-    Noise = list_to_binary(noise()),
-    CRaw = <<Raw/binary, 0, Noise/binary>>,      % Complete RAW domain.
-    CRightParsed = {domain, {Parsed, Noise}},     % What would be returned if parsing succeds.
-    ParsedToTest = (catch parse_domain(CRaw)),    % Perform the parsing.
-    Desc = lists:flatten(io_lib:format("~p, ~p", % Some useful description
-				       [Type, CRightParsed])),
-    case Type of   % What kind of test is it ?
-	correct ->
-	    [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
-	     tests_domain_parsing(Data)];
-	error   -> 
-	    CParsed = {error, invalid},
-	    [{Desc, ?_assert((ParsedToTest == CParsed) or       % We should get an error
-			     (ParsedToTest /= CRightParsed))} | % or plain wrong data.
-	     tests_domain_parsing(Data)]
-    end.
-
-%% DNS Types to test the parser.
--define(TYPES, [{a,     << 1:16>>},
-		{ns,    << 2:16>>},
-		{md,    << 3:16>>},
-		{mf,    << 4:16>>},
-		{cname, << 5:16>>},
-		{soa,   << 6:16>>},
-		{mb,    << 7:16>>},
-		{mg,    << 8:16>>},
-		{mr,    << 9:16>>},
-		{null,  <<10:16>>},
-		{wks,   <<11:16>>},
-		{ptr,   <<12:16>>},
-		{hinfo, <<13:16>>},
-		{minfo, <<14:16>>},
-		{mx,    <<15:16>>},
-		{txt,   <<16:16>>}]).
-
--define(QTYPES, [{axfr,  <<252:16>>},
-		 {mailb, <<253:16>>},
-		 {maila, <<254:16>>},
-		 {all,   <255:16>>}] ++ ?TYPES).
-
--define(CLASS, [{in, <<1:16>>},
-		{cs, <<2:16>>},
-		{ch, <<3:16>>},
-		{hs, <<4:16>>}]).
-
--define(QCLASS, [{any, <<255:16>>}] ++ ?CLASS).
-
-tests_question_parsing() ->
-    tests_question_parsing(
-      build_questions(
-	build_domains_up_to(?LABELS, 2))).
-
-tests_question_parsing([]) -> [];
-tests_question_parsing([{Type, Parsed, Raw}|Questions]) ->
-%%    Noise = list_to_binary(noise()),
-    [{"a", ?_assert({Parsed, <<>>} == parse_questions(1, <<Raw/binary>>))} |
-     tests_question_parsing(Questions)].
-
 build_questions() ->
     build_questions(build_domains_up_to(?LABELS, 2)).
 
 build_questions(Domains) ->
     lists:map(fun({Type, Parsed, Raw}) -> 
-		      {Type, [#question{qname = Parsed, qtype = a, qclass = in}],
+		      {Type, 1, [#question{qname = Parsed, qtype = a, qclass = in}],
 		       <<Raw/binary, 0, 1:16, 1:16>>} 
 	      end,
 	      Domains).
