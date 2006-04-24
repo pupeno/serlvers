@@ -408,21 +408,21 @@ rcode_to_atom(5) -> refused.
 %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tests() ->
-    [{"Label parsing", tests_label_parsing()}].
-     %{"Question parsing", tests_question_parsing()}].%,
+    [{"Label parsing", tests_label_parsing()},
+     {"Question parsing", tests_question_parsing()}].%,
      %{"Resource record parsing", tests_resource_record_parsing()},
      %{"Message parsing", tests_message_parsing()}].
 
 %% Some labels (atoms of domain names) to test the parser.
 -define(LABELS, [{correct, ["com"], <<3, "com">>},
- 		 {correct, ["pupeno"], <<6, "pupeno">>},
- 		 {correct,["software"], <<8, "software">>},
- 		 {correct,["packages"], <<8, "packages">>},
+ 		 %{correct, ["pupeno"], <<6, "pupeno">>},
+ 		 %{correct,["software"], <<8, "software">>},
+ 		 %{correct,["packages"], <<8, "packages">>},
 		 {correct,["mail"], <<4, "mail">>},
 		 {error, ["com"], <<2, "com">>},
-		 {error, ["pupeno"], <<7, "pupeno">>},
-		 {error, ["software"], <<2, "software">>},
-		 {error, ["packages"], <<4, "packages">>},
+		 %{error, ["pupeno"], <<7, "pupeno">>},
+		 %{error, ["software"], <<2, "software">>},
+		 %{error, ["packages"], <<4, "packages">>},
 		 {error, ["mail"], <<5, "mail">>}]).
 
 %% @doc Having a set of labels build all the possible domains from those of length 1 to Length.
@@ -469,14 +469,21 @@ tests_label_parsing() ->
 tests_label_parsing([]) -> [];
 tests_label_parsing([{Type, Parsed, Raw}|Data]) ->
     Noise = list_to_binary(noise()),
-    CRaw = <<Raw/binary, 0, Noise/binary>>,   % Complete RAW domain.
-    case Type of
-	correct -> CParsed = {label, {Parsed, Noise}};        % Complete PARSED domain.
-	error   -> CParsed = {error, invalid_label}
-    end,		   
-    ParsedToTest = (catch parse_label(CRaw)), % Perform the parsing.
-    Desc = lists:flatten(io_lib:format("~p", [CParsed])),
-    [{Desc, ?_assert(CParsed == ParsedToTest)} | tests_label_parsing(Data)].
+    CRaw = <<Raw/binary, 0, Noise/binary>>,      % Complete RAW domain.
+    CRightParsed = {label, {Parsed, Noise}},     % What would be returned if parsing succeds.
+    ParsedToTest = (catch parse_label(CRaw)),    % Perform the parsing.
+    Desc = lists:flatten(io_lib:format("~p, ~p", % Some useful description
+				       [Type, CRightParsed])),
+    case Type of   % What kind of test is it ?
+	correct ->
+	    [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
+	     tests_label_parsing(Data)];
+	error   -> 
+	    CParsed = {error, invalid_label},
+	    [{Desc, ?_assert((ParsedToTest == CParsed) or       % We should get an error
+			     (ParsedToTest /= CRightParsed))} | % or plain wrong data.
+	     tests_label_parsing(Data)]
+    end.
 
 %% DNS Types to test the parser.
 -define(TYPES, [{a,     << 1:16>>},
@@ -514,7 +521,7 @@ tests_question_parsing() ->
 	build_domains_up_to(?LABELS, 2))).
 
 tests_question_parsing([]) -> [];
-tests_question_parsing([{Parsed, Raw}|Questions]) ->
+tests_question_parsing([{Type, Parsed, Raw}|Questions]) ->
 %%    Noise = list_to_binary(noise()),
     [{"a", ?_assert({Parsed, <<>>} == parse_questions(1, <<Raw/binary>>))} |
      tests_question_parsing(Questions)].
@@ -523,8 +530,8 @@ build_questions() ->
     build_questions(build_domains_up_to(?LABELS, 2)).
 
 build_questions(Domains) ->
-    lists:map(fun({Parsed, Raw}) -> 
-		      {[#question{qname = Parsed, qtype = a, qclass = in}],
+    lists:map(fun({Type, Parsed, Raw}) -> 
+		      {Type, [#question{qname = Parsed, qtype = a, qclass = in}],
 		       <<Raw/binary, 0, 1:16, 1:16>>} 
 	      end,
 	      Domains).
