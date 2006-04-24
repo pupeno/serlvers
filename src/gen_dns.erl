@@ -244,7 +244,7 @@ parse_questions(0, Body, Questions) ->
     {lists:reverse(Questions), Body};
 parse_questions(Count, Body, Questions) ->
     %%io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, Count, Body, Questions]),
-    {label, {QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>}} = parse_label(Body),
+    {label, {QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>}} = parse_domain(Body),
     parse_questions(Count - 1, Rest,
 		    [#question{qname = QNAME, qtype = qtype_to_atom(QTYPE),
 			       qclass = qclass_to_atom(QCLASS)}|
@@ -261,7 +261,7 @@ parse_resource_records(0, Body, RRs) ->
     %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
     {lists:reverse(RRs), Body};
 parse_resource_records(Count, Body, RRs) ->
-    {NAME, <<TYPE:16, CLASS:16, TTL:32, RDLENGTH:16, Rest/binary>>} = parse_label(Body),
+    {NAME, <<TYPE:16, CLASS:16, TTL:32, RDLENGTH:16, Rest/binary>>} = parse_domain(Body),
     case type_to_atom(TYPE) of
 	a ->
 	    RDATA = unspecified,
@@ -276,7 +276,7 @@ parse_resource_records(Count, Body, RRs) ->
 	    RDATA = unspecified,
 	    Rest2 = Rest;
 	cname ->
-	    {RDATA, Rest2} = parse_label(Rest);
+	    {RDATA, Rest2} = parse_domain(Rest);
 	soa ->
 	    RDATA = unspecified,
 	    Rest2 = Rest;
@@ -317,19 +317,19 @@ parse_resource_records(Count, Body, RRs) ->
 %% @doc Parse a DNS label.
 %% @private Internal helper function.
 %% @since 0.2
-parse_label(Body) ->
-    parse_label([], Body).
-parse_label(Labels, <<Length:8, Rest/binary>>) when Length > 0 ->
+parse_domain(Body) ->
+    parse_domain([], Body).
+parse_domain(Labels, <<Length:8, Rest/binary>>) when Length > 0 ->
     case Rest of
 	<<Label:Length/binary-unit:8, Rest2/binary>> ->
-	    parse_label([binary_to_list(Label)|Labels], Rest2);
+	    parse_domain([binary_to_list(Label)|Labels], Rest2);
 	_Other ->
-	    {error, invalid_label}
+	    {error, invalid}
     end;
-parse_label(Labels, <<Length:8, Rest/binary>>) when Length == 0 ->
-    {label, {lists:reverse(Labels), Rest}};
-parse_label(_Labels, _Body) ->
-    {error, invalid_label}.
+parse_domain(Labels, <<Length:8, Rest/binary>>) when Length == 0 ->
+    {domain, {lists:reverse(Labels), Rest}};
+parse_domain(_Labels, _Body) ->
+    {error, invalid}.
 
 %% @doc Turn a numeric DNS type into an atom.
 %% @private Internal helper function.
@@ -408,7 +408,7 @@ rcode_to_atom(5) -> refused.
 %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tests() ->
-    [{"Label parsing", tests_label_parsing()},
+    [{"Domain parsing", tests_domain_parsing()},
      {"Question parsing", tests_question_parsing()}].%,
      %{"Resource record parsing", tests_resource_record_parsing()},
      %{"Message parsing", tests_message_parsing()}].
@@ -444,10 +444,10 @@ build_domains(Labels, N) ->
 		   one_label_to_many(Head, NewLabels) end, 
     lists:flatten(lists:map(Comb, Labels)).
 
-%% @doc Having one label combine it with each label of a list.
+%% @doc Having one label combine it with each domain of a list.
 %% @private Internal helper function.
 %% @since 0.2
-one_label_to_many({Type, Parsed, Raw}, Labels) ->
+one_label_to_many({Type, Parsed, Raw}, Domains) ->
     Comb = fun({Type2, Parsed2, Raw2}) ->  % Function to combine two Labels (parsed and raw).
 		   if (Type == correct) and (Type2 == correct) ->
 			   {correct, lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>};
@@ -455,34 +455,34 @@ one_label_to_many({Type, Parsed, Raw}, Labels) ->
 			   {error, lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>}
 		   end
 	   end,
-    lists:map(Comb, Labels).
+    lists:map(Comb, Domains).
 
-%% @doc Generate tests with all the different combinations of labels.
+%% @doc Generate tests with all the different combinations of domains.
 %% @private Internal helper function.
 %% @since 0.2
-tests_label_parsing() ->
-    tests_label_parsing(build_domains_up_to(?LABELS, 5)).
+tests_domain_parsing() ->
+    tests_domain_parsing(build_domains_up_to(?LABELS, 5)).
 
-%% @doc Generate tests with all the different combinations of labels.
+%% @doc Generate tests with all the different combinations of domains.
 %% @private Internal helper function.
 %% @since 0.2
-tests_label_parsing([]) -> [];
-tests_label_parsing([{Type, Parsed, Raw}|Data]) ->
+tests_domain_parsing([]) -> [];
+tests_domain_parsing([{Type, Parsed, Raw}|Data]) ->
     Noise = list_to_binary(noise()),
     CRaw = <<Raw/binary, 0, Noise/binary>>,      % Complete RAW domain.
-    CRightParsed = {label, {Parsed, Noise}},     % What would be returned if parsing succeds.
-    ParsedToTest = (catch parse_label(CRaw)),    % Perform the parsing.
+    CRightParsed = {domain, {Parsed, Noise}},     % What would be returned if parsing succeds.
+    ParsedToTest = (catch parse_domain(CRaw)),    % Perform the parsing.
     Desc = lists:flatten(io_lib:format("~p, ~p", % Some useful description
 				       [Type, CRightParsed])),
     case Type of   % What kind of test is it ?
 	correct ->
 	    [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
-	     tests_label_parsing(Data)];
+	     tests_domain_parsing(Data)];
 	error   -> 
-	    CParsed = {error, invalid_label},
+	    CParsed = {error, invalid},
 	    [{Desc, ?_assert((ParsedToTest == CParsed) or       % We should get an error
 			     (ParsedToTest /= CRightParsed))} | % or plain wrong data.
-	     tests_label_parsing(Data)]
+	     tests_domain_parsing(Data)]
     end.
 
 %% DNS Types to test the parser.
