@@ -265,7 +265,7 @@ parse_resource_records(0, Body, RRs) ->
     %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
     {lists:reverse(RRs), Body};
 parse_resource_records(Count, Body, RRs) ->
-    {NAME, <<TYPE:16, CLASS:16, TTL:32, RDLENGTH:16, Rest/binary>>} = parse_domain(Body),
+    {NAME, <<TYPE:16, CLASS:16, TTL:32, _RDLENGTH:16, Rest/binary>>} = parse_domain(Body),
     case type_to_atom(TYPE) of
 	a ->
 	    RDATA = unspecified,
@@ -424,44 +424,43 @@ tests(N) ->
 
 %% Some labels (atoms of domain names) to test the parser.
 -define(LABELS, [{correct, ["com"], <<3, "com">>},
- 		 {correct, ["s"], <<1, "s">>},
- 		 {correct,["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"],
-		  <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
-		 {correct,["mail"], <<4, "mail">>},
-		 {error, ["mail"], <<5, "mail">>}]).
+ 		 {correct, ["s"], <<1, "s">>}]).%,
+ 		 %{correct,["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"],
+		 % <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
+		 %{error, ["mail"], <<5, "mail">>}]).
 
 %% DNS Types to test the parser.
--define(TYPES, [{a,     << 1:16>>},
-		{ns,    << 2:16>>},
-		{md,    << 3:16>>},
-		{mf,    << 4:16>>},
-		{cname, << 5:16>>},
-		{soa,   << 6:16>>},
-		{mb,    << 7:16>>},
-		{mg,    << 8:16>>},
-		{mr,    << 9:16>>},
-		{null,  <<10:16>>},
-		{wks,   <<11:16>>},
-		{ptr,   <<12:16>>},
-		{hinfo, <<13:16>>},
-		{minfo, <<14:16>>},
-		{mx,    <<15:16>>},
-		{txt,   <<16:16>>}]).
+-define(TYPES, [{correct, a,     << 1:16>>},
+		%{correct, ns,    << 2:16>>},
+		%{correct, md,    << 3:16>>},
+		%{correct, mf,    << 4:16>>},
+		%{correct, cname, << 5:16>>},
+		%{correct, soa,   << 6:16>>},
+		%{correct, mb,    << 7:16>>},
+		%{correct, mg,    << 8:16>>},
+		%{correct, mr,    << 9:16>>},
+		%{correct, null,  <<10:16>>},
+		%{correct, wks,   <<11:16>>},
+		%{correct, ptr,   <<12:16>>},
+		%{correct, hinfo, <<13:16>>},
+		%{correct, minfo, <<14:16>>},
+		%{correct, mx,    <<15:16>>},
+		{correct, txt,   <<16:16>>}]).
 
 %% DNS QTypes to test the parser.
--define(QTYPES, [{axfr,  <<252:16>>},
-		 {mailb, <<253:16>>},
-		 {maila, <<254:16>>},
-		 {all,   <255:16>>}] ++ ?TYPES).
+-define(QTYPES, [%{correct, axfr,  <<252:16>>},
+		 %{correct, mailb, <<253:16>>},
+		 %{correct, maila, <<254:16>>},
+		 {correct, all,   <<255:16>>}] ++ ?TYPES).
 
 %% DNS Classes to test the parser.
--define(CLASS, [{in, <<1:16>>},
-		{cs, <<2:16>>},
-		{ch, <<3:16>>},
-		{hs, <<4:16>>}]).
+-define(CLASSES, [%{correct, in, <<1:16>>},
+		  %{correct, cs, <<2:16>>},
+		  %{correct, ch, <<3:16>>},
+		  {correct, hs, <<4:16>>}]).
 
 %% DNS QClasses to test the parser.
--define(QCLASS, [{any, <<255:16>>}] ++ ?CLASS).
+-define(QCLASSES, [{correct, any, <<255:16>>}] ++ ?CLASSES).
 
 %%% Testing functions.
 
@@ -494,8 +493,8 @@ tests_domain_parsing_([{Type, Parsed, Raw}|Domains]) ->
 
 tests_question_parsing(N) ->
     tests_question_parsing_(
-      build_questions(
-	build_domains_up_to(?LABELS, N))).
+      build_questions(build_domains_up_to(?LABELS, N),
+		      ?QTYPES, ?QCLASSES)).
 
 tests_question_parsing_([]) -> [];
 tests_question_parsing_([{Type, Count, Parsed, Raw}|Questions]) ->
@@ -548,15 +547,55 @@ one_label_per_domain({Type, Parsed, Raw}, Domains) ->
 	   end,
     lists:map(Comb, Domains).
 
-build_questions() ->
-    build_questions(build_domains_up_to(?LABELS, 2)).
+build_questions(N) ->
+    build_questions(build_domains_up_to(?LABELS, N), ?QTYPES, ?QCLASSES).
 
-build_questions(Domains) ->
-    lists:map(fun({Type, Parsed, Raw}) -> 
-		      {Type, 1, [#question{qname = Parsed, qtype = a, qclass = in}],
-		       <<Raw/binary, 0, 1:16, 1:16>>} 
-	      end,
-	      Domains).
+%% build_questions_up_to(Domains, QTypes, QClass, N) ->
+%%     lists:foldl(fun(N, Questions) -> Questions ++ build_domains(, N) end,
+%%  		[],
+%%  		lists:seq(1,Length)).
+    
+
+build_questions([], _QTypes, _QClasses) -> [];
+build_questions(_Domains, [], _QClasses) -> [];
+build_questions(_Domains, _QTypes, []) -> [];
+build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, {QCType, QCParsed, QCRaw}) ->
+    Type = if (DType == correct) and (QTType == correct) and (QCType == correct)-> correct;
+	      true -> error
+	   end,
+    {Type, 1, [#question{qname = DParsed, qtype = QTParsed, qclass = QCParsed}],
+     <<DRaw/binary, 0, QTRaw/binary, QCRaw/binary>>};
+build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, QClasses) ->
+    BuildQuestion = fun(QClass) ->
+			    build_questions({DType, DParsed, DRaw},
+					    {QTType, QTParsed, QTRaw}, QClass)
+		    end,
+    lists:flatten(lists:map(BuildQuestion, QClasses));
+build_questions({DType, DParsed, DRaw}, QTypes, QClasses) ->
+    BuildQuestion = fun(QType) ->
+			    build_questions({DType, DParsed, DRaw}, QType, QClasses)
+		    end,
+    lists:flatten(lists:map(BuildQuestion, QTypes));
+build_questions(Domains, QTypes, QClasses) ->
+    BuildQuestion = fun(Domain) ->
+			    build_questions(Domain, QTypes, QClasses)
+		    end,
+    lists:flatten(lists:map(BuildQuestion, Domains)).
+
+%% @doc Having one label combine it with each domain of a list.
+%% @private Internal helper function.
+%% @since 0.2
+one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
+    Comb = fun({Type2, Count2, Parsed2, Raw2}) ->
+		   if (Type == correct) and (Type2 == correct) ->
+			   {correct, Count + Count2,
+			    lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>};
+		      true ->
+			   {error, Count + Count2,
+			    lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>}
+		   end
+	   end,
+    lists:map(Comb, Questions).
     
 %%%%%%%%%%%%%%%%%% Old boring tests %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
