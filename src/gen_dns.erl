@@ -492,9 +492,10 @@ tests_domain_parsing_([{Type, Parsed, Raw}|Domains]) ->
     end.
 
 tests_question_parsing(N) ->
+    Domains = build_domains_up_to(?LABELS, N),
+    Questions = build_questions(Domains, ?QTYPES, ?QCLASSES),
     tests_question_parsing_(
-      build_questions(build_domains_up_to(?LABELS, N),
-		      ?QTYPES, ?QCLASSES)).
+      build_questions_up_to(Questions, N)).
 
 tests_question_parsing_([]) -> [];
 tests_question_parsing_([{Type, Count, Parsed, Raw}|Questions]) ->
@@ -518,27 +519,27 @@ tests_question_parsing_([{Type, Count, Parsed, Raw}|Questions]) ->
 %% @doc Having a set of labels build all the possible domains from those of length 1 to Length.
 %% @private Internal helper function.
 %% @since 0.2
-build_domains_up_to(Labels, Length) ->
-    lists:foldl(fun(N, Domains) -> Domains ++ build_domains(Labels, N) end,
+build_domains_up_to(Domains, Count) ->
+    lists:foldl(fun(N, NewDomains) -> NewDomains ++ build_domains(Domains, N) end,
 		[],
-		lists:seq(1,Length)).
+		lists:seq(1,Count)).
     
 %% @doc Having a set of labels build domains names of N labels.
 %% @private Internal helper function.
 %% @since 0.2
-build_domains(_Labels, 0) -> [];
-build_domains(Labels, 1) -> Labels;
-build_domains(Labels, N) ->
-    NewLabels = build_domains(Labels, N - 1),
-    Comb = fun(Head) ->                        % Function to combine one label to NewLabels.
-		   one_label_per_domain(Head, NewLabels) end, 
-    lists:flatten(lists:map(Comb, Labels)).
+build_domains(_Domains, 0) -> [];
+build_domains(Domains, 1) -> Domains;
+build_domains(Domains, N) ->
+    NewDomains = build_domains(Domains, N - 1),
+    Comb = fun(Label) ->                        % Function to combine one label to NewDomains.
+		   one_domain_per_domain(Label, NewDomains) end, 
+    lists:flatten(lists:map(Comb, Domains)).
 
 %% @doc Having one label combine it with each domain of a list.
 %% @private Internal helper function.
 %% @since 0.2
-one_label_per_domain({Type, Parsed, Raw}, Domains) ->
-    Comb = fun({Type2, Parsed2, Raw2}) ->  % Function to combine two Labels (parsed and raw).
+one_domain_per_domain({Type, Parsed, Raw}, Domains) ->
+    Comb = fun({Type2, Parsed2, Raw2}) ->  % Function to combine two domains.
 		   if (Type == correct) and (Type2 == correct) ->
 			   {correct, lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>};
 		      true ->
@@ -550,10 +551,12 @@ one_label_per_domain({Type, Parsed, Raw}, Domains) ->
 build_questions(N) ->
     build_questions(build_domains_up_to(?LABELS, N), ?QTYPES, ?QCLASSES).
 
-%% build_questions_up_to(Domains, QTypes, QClass, N) ->
-%%     lists:foldl(fun(N, Questions) -> Questions ++ build_domains(, N) end,
-%%  		[],
-%%  		lists:seq(1,Length)).
+build_questions_up_to(Questions, Count) ->
+    lists:foldl(
+      fun(N, NewQuestions) -> 
+	      NewQuestions ++ build_questions(Questions, N) end,
+      [],
+      lists:seq(1, Count)).
     
 
 build_questions([], _QTypes, _QClasses) -> [];
@@ -581,6 +584,14 @@ build_questions(Domains, QTypes, QClasses) ->
 			    build_questions(Domain, QTypes, QClasses)
 		    end,
     lists:flatten(lists:map(BuildQuestion, Domains)).
+
+build_questions(_Questions, 0) -> [];
+build_questions(Questions, 1) -> Questions;
+build_questions(Questions, N) ->
+    NewQuestions = build_questions(Questions, N - 1),
+    Comb = fun(Question) ->              % Function to combine one label to NewQuestions.
+		   one_question_per_questions(Question, NewQuestions) end, 
+    lists:flatten(lists:map(Comb, Questions)).
 
 %% @doc Having one label combine it with each domain of a list.
 %% @private Internal helper function.
