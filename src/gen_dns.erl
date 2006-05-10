@@ -416,10 +416,10 @@ rcode_to_atom(5) -> refused.
 
 %% Some labels (atoms of domain names) to test the parser.
 -define(LABELS, [{correct, ["com"], <<3, "com">>},
- 		 {correct, ["s"], <<1, "s">>}]).%,
+ 		 {correct, ["s"], <<1, "s">>},
                  %{correct,["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"],
 		 % <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
-		 %{error, ["mail"], <<5, "mail">>}]).
+		 {error, ["mail"], <<5, "mail">>}]).
 
 %% DNS Types to test the parser.
 -define(TYPES, [{correct, a,     << 1:16>>},
@@ -457,11 +457,10 @@ rcode_to_atom(5) -> refused.
 %% @doc Generates and run all tests.
 %% @since 0.2
 test(Factor, Sample) ->
-    Labels = n_of(Sample, ?LABELS),                             %% Take a sample of the labels.
-    Domains = n_of(Sample, build_domains(Labels, Factor)), %% Build the domains and take a sample of it.
-    Domains.
-    %eunit:test(DomainTests).
-%%     eunit:test(tests(Depth, Factor)).
+  Labels = n_of(Sample, ?LABELS),                        %% Take a sample of the labels.
+  Domains = n_of(Sample, build_domains(Labels, Factor)), %% Build the domains and take a sample of it.
+  DomainParsingTests = domain_parsing_tests(Domains),
+  eunit:test(DomainParsingTests).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%% Domain testing %%%%%%%%%%%%%%%%%%%
@@ -470,10 +469,14 @@ test(Factor, Sample) ->
 %% @private Internal helper function.
 %% @since 0.2
 build_domains(Labels, Length) ->
-  BuildDomains = fun(N, Domains) -> 
+  BuildDomains = fun(N, Domains) ->                              % Function to build domains of N length and append it to Domains.
 		     Domains ++ build_domains_(Labels, N)
 		 end,
-  lists:foldl(BuildDomains, [], lists:seq(1, Length)).
+  Domains = lists:foldl(BuildDomains, [], lists:seq(1, Length)), % Build all possible domains up to Length.
+  NullTerm = fun({Type, ParsedDomain, RawDomain}) ->             % Function to add the null character to the domain.
+		 {Type, ParsedDomain, <<RawDomain/binary, 0>>}
+	     end,
+  lists:map(NullTerm, Domains).                                  % Add the null character to the end of each domains.
 
 %% @doc Having a set of labels build domains names of N labels.
 %% @private Internal helper function.
@@ -500,6 +503,23 @@ one_domain_per_domain({Type, Parsed, Raw}, Domains) ->
 	 end,
   lists:map(Comb, Domains).
 
+domain_parsing_tests([]) -> [];
+domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
+  Noise = list_to_binary(noise()),
+  CRaw = <<Raw/binary, Noise/binary>>,      % Add noise
+  CRightParsed = {domain, Parsed, Noise},      % What would be returned if parsing succeds.
+  ParsedToTest = (catch parse_domain(CRaw)),   % Perform the parsing.
+  Desc = lists:flatten(io_lib:format("~p, ~p", % Some useful description
+				     [Type, CRightParsed])),
+  case Type of   % What kind of test is it ?
+    correct ->
+      [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
+       domain_parsing_tests(Domains)];
+    error   -> 
+      [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
+		       (ParsedToTest /= CRightParsed))} |    % or plain wrong data (not an exception).
+       domain_parsing_tests(Domains)]
+  end. 
 
 
 
