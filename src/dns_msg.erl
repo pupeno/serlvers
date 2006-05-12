@@ -16,9 +16,10 @@
 
 -module(dns_msg).
 
-%%-export([test/1, tests/1]).
+-export([parse_message/1]).
+-export([test/2]).
 
--compile(export_all).
+%%-compile(export_all).
 
 -include_lib("eunit/include/eunit.hrl").
 %%-include_lib("eunit/include/eunit_test.hrl").
@@ -158,7 +159,7 @@ parse_resource_records(Count, Body, RRs) ->
 					   rdata = RDATA}|
 			  RRs]).
 
-%% @doc Parse a DNS label.
+%% @doc Parse a DNS domain.
 %% @private Internal helper function.
 %% @since 0.2
 parse_domain(Body) ->
@@ -174,6 +175,15 @@ parse_domain(Labels, <<Length:8, Rest/binary>>) when Length == 0 ->
   {domain, lists:reverse(Labels), Rest};
 parse_domain(_Labels, _Body) ->
   {error, invalid}.
+
+%% @doc Unparse a DNS domain.
+%% @private Internal helper function.
+%% @since 0.2
+unparse_domain({domain, Domain, Rest}) ->
+  RawDomain = unparse_domain(Domain),
+  <<RawDomain/binary, Rest/binary>>;
+unparse_domain(_Domain) ->
+  <<"caca">>.
 
 %% @doc Turn a numeric DNS type into an atom.
 %% @private Internal helper function.
@@ -320,6 +330,7 @@ test(Factor, Sample) ->
   Labels = n_of(Sample, ?LABELS),                        %% Take a sample of the labels.
   Domains = n_of(Sample, build_domains(Labels, Factor)), %% Build the domains and take a sample of it.
   DomainParsingTests = domain_parsing_tests(Domains),
+  DomainUnparsingTests = domain_unparsing_tests(Domains),
 
   QTypes = n_of(Sample, ?QTYPES),
   QClasses = n_of(Sample, ?QCLASSES),
@@ -336,7 +347,7 @@ test(Factor, Sample) ->
   MessageParsingTests = tests_message_parsing(),
 
 
-  eunit:test(DomainParsingTests ++ 
+  eunit:test(DomainParsingTests ++ DomainUnparsingTests ++
 	     QuestionsParsingTests ++ 
 	     RRsParsingTests ++ 
 	     MessageParsingTests).
@@ -382,27 +393,48 @@ one_domain_per_domain({Type, Parsed, Raw}, Domains) ->
 	 end,
   lists:map(Comb, Domains).
 
-%% @doc Having a list of Domains build all the tests to be used by EUnit.
+%% @doc Having a list of Domains build all the parsing tests to be used by EUnit.
 %% @private Internal helper function.
 %% @todo tail-optimize.
 %% @since 0.2
 domain_parsing_tests([]) -> [];
 domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
   Noise = list_to_binary(noise()),
-  CRaw = <<Raw/binary, Noise/binary>>,      % Add noise
-  CRightParsed = {domain, Parsed, Noise},      % What would be returned if parsing succeds.
+  CRaw = <<Raw/binary, Noise/binary>>,         % Complete raw, add noise.
+  CParsed = {domain, Parsed, Noise},           % Complete parsed, add signature and noise.
   ParsedToTest = (catch parse_domain(CRaw)),   % Perform the parsing.
-  Desc = lists:flatten(io_lib:format("~p, ~p", % Some useful description
-				     [Type, CRightParsed])),
+  Desc = lists:flatten(                        % Some useful description
+	   io_lib:format("~p, ~p", [Type, CParsed])),
   case Type of   % What kind of test is it ?
     correct ->
-      [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
+      [{Desc, ?_assert(ParsedToTest == CParsed)} |
        domain_parsing_tests(Domains)];
     error   -> 
       [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
-		       (ParsedToTest /= CRightParsed))} |    % or plain wrong data (not an exception).
+		       (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
        domain_parsing_tests(Domains)]
-  end. 
+  end.
+
+%% @doc Having a list of Domains build all the unparsing tests to be used by EUnit.
+%% @private Internal helper function.
+%% @todo tail-optimize.
+%% @since 0.2
+domain_unparsing_tests([]) -> [];
+domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
+  Noise = list_to_binary(noise()),
+  CRaw = <<Raw/binary, Noise/binary>>,         % Complete raw, add noise
+  CParsed = {domain, Parsed, Noise},           % Complete parsed, add signature and noise.
+  RawToTest = (catch unparse_domain(CParsed)), % Perform the unparsing.
+  Desc = lists:flatten(                        % Some useful description
+	   io_lib:format("~p, ~p", [Type, CParsed])),
+  case Type of                                            % What kind of test is it ?
+    correct ->
+      [{Desc, ?_assert(RawToTest == CRaw)} | domain_unparsing_tests(Domains)];
+    error   -> 
+      [{Desc, ?_assert((RawToTest == {error, invalid}) or % We should get an error
+		       (RawToTest /= CRaw))} |            % or plain wrong data (not an exception).
+       domain_unparsing_tests(Domains)]
+  end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Question Parsing testing %%%%%%%%%%%%%
@@ -501,7 +533,7 @@ questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
 %% @doc . 
 %% @private Internal helper function.
 %% @since 0.2
-build_resource_records(_Domains, _Types, _Classes, _Length) ->
+%%build_resource_records(_Domains, _Types, _Classes, _Length) ->
   %%  RDATA = [{cname, Domains},
   %% 	   {hinfo, []},    % Where do we get random hinfos ?
   %% 	   {mx, []},       % Build MX using Domains and a random 16-bits integer.
@@ -511,7 +543,7 @@ build_resource_records(_Domains, _Types, _Classes, _Length) ->
   %% 	   {txt, []},      % Build txt with random text.
   %% 	   {a, []},        % Where do we get random IPs ?
   %% 	   {wks, []}],     % is this used anyway ?
-  [].
+  %%[].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%% DNS Message Parsing testing %%%%%%%%%%%
@@ -519,8 +551,8 @@ build_resource_records(_Domains, _Types, _Classes, _Length) ->
 %% @doc . 
 %% @private Internal helper function.
 %% @since 0.2
-build_messages(_Questions, _RRs) ->
-  [].
+%%build_messages(_Questions, _RRs) ->
+%%  [].
 
 
 %%%%%%%%%%%%%%%%%% Old boring tests %%%%%%%%%%%%%%%%%%%%%%%%%%%
