@@ -19,7 +19,7 @@
 -export([parse_message/1]).
 -export([test/2]).
 
-%%-compile(export_all).
+-compile(export_all).
 
 -include_lib("eunit/include/eunit.hrl").
 %%-include_lib("eunit/include/eunit_test.hrl").
@@ -180,10 +180,20 @@ parse_domain(_Labels, _Body) ->
 %% @private Internal helper function.
 %% @since 0.2
 unparse_domain({domain, Domain, Rest}) ->
+  %%io:fwrite("~w:unparse_domain(~w)~n", [?MODULE, {domain, Domain, Rest}]),
   RawDomain = unparse_domain(Domain),
   <<RawDomain/binary, Rest/binary>>;
-unparse_domain(_Domain) ->
-  <<"caca">>.
+unparse_domain(Domain) ->
+  %%io:fwrite("~w:unparse_domain(~w)~n", [?MODULE, Domain]),
+  unparse_domain(<<>>, Domain).
+unparse_domain(RawDomain, []) ->
+  %%io:fwrite("~w:unparse_domain(~w, ~w)~n", [?MODULE, RawDomain, []]),
+  <<RawDomain/binary, 0:8>>;
+unparse_domain(RawDomain, [Label|Labels]) ->
+  %%io:fwrite("~w:unparse_domain(~w, ~w)~n", [?MODULE, RawDomain, [Label|Labels]]),
+  LabelLength = length(Label),
+  BinaryLabel = list_to_binary(Label),
+  unparse_domain(<<RawDomain/binary, LabelLength:8, BinaryLabel/binary>>, Labels).
 
 %% @doc Turn a numeric DNS type into an atom.
 %% @private Internal helper function.
@@ -404,8 +414,9 @@ domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
   CParsed = {domain, Parsed, Noise},           % Complete parsed, add signature and noise.
   ParsedToTest = (catch parse_domain(CRaw)),   % Perform the parsing.
   Desc = lists:flatten(                        % Some useful description
-	   io_lib:format("~p, ~p", [Type, CParsed])),
-  case Type of   % What kind of test is it ?
+	   io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, ParsedToTest])),
+ 
+  case Type of % What kind of test is it ?
     correct ->
       [{Desc, ?_assert(ParsedToTest == CParsed)} |
        domain_parsing_tests(Domains)];
@@ -426,8 +437,9 @@ domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
   CParsed = {domain, Parsed, Noise},           % Complete parsed, add signature and noise.
   RawToTest = (catch unparse_domain(CParsed)), % Perform the unparsing.
   Desc = lists:flatten(                        % Some useful description
-	   io_lib:format("~p, ~p", [Type, CParsed])),
-  case Type of                                            % What kind of test is it ?
+	   io_lib:format("~w, ~w, ~w, ~w", [Type, CParsed, CRaw, RawToTest])),
+
+  case Type of % What kind of test is it ?
     correct ->
       [{Desc, ?_assert(RawToTest == CRaw)} | domain_unparsing_tests(Domains)];
     error   -> 
@@ -512,18 +524,17 @@ one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
 questions_parsing_tests([]) -> [];
 questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
   Noise = list_to_binary(noise()),
-  CRaw = <<Raw/binary, Noise/binary>>,                 % Add noise
-  CRightParsed = {questions, Parsed, Noise},           % What would be returned if parsing succeds.
+  CRaw = <<Raw/binary, Noise/binary>>,                 % Complete raw, add noise.
+  CParsed = {questions, Parsed, Noise},                % Complete parsed, add signature and noise.
   ParsedToTest = (catch parse_questions(Count, CRaw)), % Perform the parsing.
-  Desc = lists:flatten(io_lib:format("~p, ~p, ~p, ~p", % Some useful description
-				     [Type, CRightParsed, CRaw, ParsedToTest])),
+  Desc = lists:flatten(                                % Some useful description
+	   io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, ParsedToTest])),
   case Type of   % What kind of test is it ?
     correct ->
-      [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
-       questions_parsing_tests(Questions)];
+      [{Desc, ?_assert(ParsedToTest == CParsed)} | questions_parsing_tests(Questions)];
     error   -> 
       [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
-		       (ParsedToTest /= CRightParsed))} |    % or plain wrong data (not an exception).
+		       (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
        questions_parsing_tests(Questions)]
   end.
 
