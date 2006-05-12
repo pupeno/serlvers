@@ -256,39 +256,38 @@ rcode_to_atom(5) -> refused.
 
 %% Some labels (atoms of domain names) to test the parser.
 -define(LABELS, [{correct, ["com"], <<3, "com">>},
- 		 {correct, ["s"], <<1, "s">>}].%,
-						%{correct,["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"],
-						% <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
-						%{error, ["mail"], <<5, "mail">>}]).
+ 		 {correct, ["s"], <<1, "s">>},
+		 {correct,["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"], <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
+		 {error, ["mail"], <<5, "mail">>}]).
 
 %% DNS Types to test the parser.
 -define(TYPES, [{correct, a,     << 1:16>>},
-						%{correct, ns,    << 2:16>>},
-						%{correct, md,    << 3:16>>},
-						%{correct, mf,    << 4:16>>},
-						%{correct, cname, << 5:16>>},
-						%{correct, soa,   << 6:16>>},
-						%{correct, mb,    << 7:16>>},
-						%{correct, mg,    << 8:16>>},
-						%{correct, mr,    << 9:16>>},
-						%{correct, null,  <<10:16>>},
-						%{correct, wks,   <<11:16>>},
-						%{correct, ptr,   <<12:16>>},
-						%{correct, hinfo, <<13:16>>},
-						%{correct, minfo, <<14:16>>},
-						%{correct, mx,    <<15:16>>},
+		{correct, ns,    << 2:16>>},
+		{correct, md,    << 3:16>>},
+		{correct, mf,    << 4:16>>},
+		{correct, cname, << 5:16>>},
+		{correct, soa,   << 6:16>>},
+		{correct, mb,    << 7:16>>},
+		{correct, mg,    << 8:16>>},
+		{correct, mr,    << 9:16>>},
+		{correct, null,  <<10:16>>},
+		{correct, wks,   <<11:16>>},
+		{correct, ptr,   <<12:16>>},
+		{correct, hinfo, <<13:16>>},
+		{correct, minfo, <<14:16>>},
+		{correct, mx,    <<15:16>>},
  		{correct, txt,   <<16:16>>}]).
 
 %% DNS QTypes to test the parser.
--define(QTYPES, [%{correct, axfr,  <<252:16>>},
-						%{correct, mailb, <<253:16>>},
-						%{correct, maila, <<254:16>>},
+-define(QTYPES, [{correct, axfr,  <<252:16>>},
+		 {correct, mailb, <<253:16>>},
+		 {correct, maila, <<254:16>>},
  		 {correct, all,   <<255:16>>}] ++ ?TYPES).
 
 %% DNS Classes to test the parser.
--define(CLASSES, [%{correct, in, <<1:16>>},
-						%{correct, cs, <<2:16>>},
-						%{correct, ch, <<3:16>>},
+-define(CLASSES, [{correct, in, <<1:16>>},
+		  {correct, cs, <<2:16>>},
+		  {correct, ch, <<3:16>>},
  		  {correct, hs, <<4:16>>}]).
 
 %% DNS QClasses to test the parser.
@@ -503,15 +502,15 @@ questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
 %% @private Internal helper function.
 %% @since 0.2
 build_resource_records(_Domains, _Types, _Classes, _Length) ->
-%%  RDATA = [{cname, Domains},
-%% 	   {hinfo, []},    % Where do we get random hinfos ?
-%% 	   {mx, []},       % Build MX using Domains and a random 16-bits integer.
-%% 	   {ns, Domains},
-%% 	   {ptr, Domains},
-%% 	   {soa, []},      % Build SOA using Domains, root+domains for emails and random values.
-%% 	   {txt, []},      % Build txt with random text.
-%% 	   {a, []},        % Where do we get random IPs ?
-%% 	   {wks, []}],     % is this used anyway ?
+  %%  RDATA = [{cname, Domains},
+  %% 	   {hinfo, []},    % Where do we get random hinfos ?
+  %% 	   {mx, []},       % Build MX using Domains and a random 16-bits integer.
+  %% 	   {ns, Domains},
+  %% 	   {ptr, Domains},
+  %% 	   {soa, []},      % Build SOA using Domains, root+domains for emails and random values.
+  %% 	   {txt, []},      % Build txt with random text.
+  %% 	   {a, []},        % Where do we get random IPs ?
+  %% 	   {wks, []}],     % is this used anyway ?
   [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
