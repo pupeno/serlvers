@@ -1,3 +1,4 @@
 - Add signatures to all the return values of the parsing functions of messages.
 - Document the signature of all functions.
-- Make the DNS testing cases more corner (labels of minimun and maximum length, domains of minimum and maximun length).
+- Make resource reccords and message test cases as dynamic as domains and queries test cases.
+- Move dns_msg.erl to dns.erl if it doesn't conflict with anything else.
