@@ -66,8 +66,7 @@
 %% @private Only Erlang itself should call this function.
 %% @since 0.2
 behaviour_info(callbacks) ->
-  [{init, 1}, %{daytime, 1}, 
-   {terminate, 2}];
+  [{init, 1}, {handle_message, 2}, {terminate, 2}];
 behaviour_info(_) ->
   undefined.
 
@@ -84,7 +83,7 @@ behaviour_info(_) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start(Module, Args, Options) ->
-  io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
+  %%io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
   gen_server:start(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named dns server.
@@ -101,7 +100,7 @@ start(Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start(SupName, Module, Args, Options) ->
-  io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
+  %%io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
   gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Start an unnamed dns server and link to it.
@@ -117,7 +116,7 @@ start(SupName, Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start_link(Module, Args, Options) ->
-  io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
+  %%io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
   gen_server:start_link(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named dns server and link to it.
@@ -134,7 +133,7 @@ start_link(Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start_link(SupName, Module, Args, Options) ->
-  io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
+  %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
   gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Stop a named process.
@@ -146,14 +145,14 @@ start_link(SupName, Module, Args, Options) ->
 %% @spec (Name) -> ok
 %%   Name = atom() | {local, atom()} | {global, atom()}
 stop(Process) ->
-  io:fwrite("~w:stop(~w)~n", [?MODULE, Process]),
+  %%io:fwrite("~w:stop(~w)~n", [?MODULE, Process]),
   gen_server:cast(Process, stop).
 
 %% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular dns server gets called (same as this module implementing a particular gen_server).
 %% @private Only gen_server should call this function.
 %% @since 0.2
 init({Module, Args}) ->
-  io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
+  %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
   process_flag(trap_exit, true),
   {ok, ModState} = Module:init(Args),
   {ok, {Module, ModState}}.
@@ -180,23 +179,22 @@ handle_cast(_Request, State) ->
 %% @since 0.2
 handle_info({connected, Socket}, {Module, ModState}) ->
   io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {connected, Socket}, {Module, ModState}]),
-						%    %%{Reply, NewModState} = Module:dns(ModState),
-						%    %%gen_tcp:send(Socket, Reply),
-						%    {stop, normal, {Module, NewModState}};
+  %%    %%{Reply, NewModState} = Module:dns(ModState),
+  %%    %%gen_tcp:send(Socket, Reply),
+  %%    {stop, normal, {Module, NewModState}};
   {noreply, {Module, ModState}};
 handle_info({udp, Socket, IP, InPortNo, Packet}, {Module, ModState}) -> % Handle UDP packages.
   io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, Packet} , {Module, ModState}]),
-  %%{Reply, NewModState} = Module:dns(ModState), % Generate the reply.
   Message = parse_message(list_to_binary(Packet)),
-  io:fwrite("Message = ~w.~n", [Message]),
-  gen_udp:send(Socket, IP, InPortNo, "huhuhuhuhuhuhuhuhuhuhuhuhuhuhuhuhuhu"),
-  {stop, normal, {Module, ModState}};
+  {Reply, NewModState} = Module:handle_message(Message, ModState), % Generate the reply.
+  gen_udp:send(Socket, IP, InPortNo, Reply),
+  {stop, normal, {Module, NewModState}};
 handle_info({tcp, Socket, Data}, {Module, ModState}) -> % Handle TCP queries.
   io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {tcp, Socket, Data} , {Module, ModState}]),
   Message = parse_message(list_to_binary(Data)),
-  io:fwrite("Message = ~w.~n", [Message]),
-  gen_tcp:send(Socket, "caca"),
-  {stop, normal, {Module, ModState}};
+  {Reply, NewModState} = Module:handle_message(Message, ModState), % Generate the reply.
+  gen_tcp:send(Socket, Reply),
+  {stop, normal, {Module, NewModState}};
 handle_info(_Info, State) ->
   io:fwrite("~w:handle_info(~w, ~w)~nUnknow message.~n", [?MODULE, _Info, State]),
   {noreply, normal, State}.
