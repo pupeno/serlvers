@@ -223,7 +223,7 @@ parse_message(RawMsg) ->
   %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
   <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, 
    ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
-  {Questions, Rest} = parse_questions(QDCOUNT, Body),
+  {questions, Questions, Rest} = parse_questions(QDCOUNT, Body),
   {Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
   {Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
   {Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
@@ -265,7 +265,8 @@ parse_resource_records(0, Body, RRs) ->
   %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
   {lists:reverse(RRs), Body};
 parse_resource_records(Count, Body, RRs) ->
-  {NAME, <<TYPE:16, CLASS:16, TTL:32, _RDLENGTH:16, Rest/binary>>} = parse_domain(Body),
+  %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, Count, Body, RRs]),
+  {domain, NAME, <<TYPE:16, CLASS:16, TTL:32, _RDLENGTH:16, Rest/binary>>} = parse_domain(Body),
   case type_to_atom(TYPE) of
     a ->
       RDATA = unspecified,
@@ -280,7 +281,7 @@ parse_resource_records(Count, Body, RRs) ->
       RDATA = unspecified,
       Rest2 = Rest;
     cname ->
-      {RDATA, Rest2} = parse_domain(Rest);
+      {domain, RDATA, Rest2} = parse_domain(Rest);
     soa ->
       RDATA = unspecified,
       Rest2 = Rest;
@@ -404,7 +405,7 @@ rcode_to_atom(0) -> no_error;
 rcode_to_atom(1) -> format_error;
 rcode_to_atom(2) -> server_failure;
 rcode_to_atom(3) -> name_error;
-rcode_to_atom(4) -> not_implemente;
+rcode_to_atom(4) -> not_implemented;
 rcode_to_atom(5) -> refused.
 
 
@@ -417,9 +418,9 @@ rcode_to_atom(5) -> refused.
 %% Some labels (atoms of domain names) to test the parser.
 -define(LABELS, [{correct, ["com"], <<3, "com">>},
  		 {correct, ["s"], <<1, "s">>}].%,
-                 %{correct,["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"],
-		 % <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
-		 %{error, ["mail"], <<5, "mail">>}]).
+						%{correct,["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"],
+						% <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
+						%{error, ["mail"], <<5, "mail">>}]).
 
 %% DNS Types to test the parser.
 -define(TYPES, [{correct, a,     << 1:16>>},
@@ -454,6 +455,27 @@ rcode_to_atom(5) -> refused.
 %% DNS QClasses to test the parser.
 -define(QCLASSES, [{correct, any, <<255:16>>}] ++ ?CLASSES).
 
+%% DNS QRs to test the parser.
+-define(QRS, [{correct, query_,   <<0:1>>},
+	      {correct, response, <<1:1>>}]).
+
+%% DNS Opcodes to test the parser.
+-define(OPCODES, [{correct, query_, <<0:4>>},
+		  {correct, iquery, <<1:4>>},
+		  {correct, status, <<2:4>>}]).
+
+%% DNS Booleans to test the parser.
+-define(BOOLEANS, [{correct, false, <<0:1>>},
+		   {correct, true,  <<1:1>>}]).
+
+%% DNS RCodes to test the parser.
+-define(RCODES, [{correct, no_error,        <<0:4>>},
+		 {correct, format_error,    <<1:4>>},
+		 {correct, server_failure,  <<2:4>>},
+		 {correct, name_error,      <<3:4>>},
+		 {correct, not_implemented, <<4:4>>},
+		 {correct, refused,         <<5:4>>}]).
+
 %% @doc Generates and run all tests.
 %% @since 0.2
 test(Factor, Sample) ->
@@ -466,7 +488,20 @@ test(Factor, Sample) ->
   Questions = n_of(Sample, build_questions(Domains, QTypes, QClasses, Factor)),
   QuestionsParsingTests = questions_parsing_tests(Questions),
 
-  eunit:test(DomainParsingTests ++ QuestionsParsingTests).
+  %% TODO: make these tests dynamic as the previous ones.
+  %%Types = n_of(Sample, ?TYPES),
+  %%Classes = n_of(Sample, ?CLASSES),
+  %%RRs = n_of(Sample, build_resource_records(Domains, Types, Classes, Factor)),
+  RRsParsingTests = tests_resource_record_parsing(),
+
+  %% TODO: make these tests dynamic as the previous ones.
+  MessageParsingTests = tests_message_parsing(),
+
+
+  eunit:test(DomainParsingTests ++ 
+	     QuestionsParsingTests ++ 
+	     RRsParsingTests ++ 
+	     MessageParsingTests).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%% Domain Parsing testing %%%%%%%%%%%%%%
@@ -610,7 +645,7 @@ questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
   CRaw = <<Raw/binary, Noise/binary>>,                 % Add noise
   CRightParsed = {questions, Parsed, Noise},           % What would be returned if parsing succeds.
   ParsedToTest = (catch parse_questions(Count, CRaw)), % Perform the parsing.
-  Desc = lists:flatten(io_lib:format("~p, ~p, ~p, ~p",        % Some useful description
+  Desc = lists:flatten(io_lib:format("~p, ~p, ~p, ~p", % Some useful description
 				     [Type, CRightParsed, CRaw, ParsedToTest])),
   case Type of   % What kind of test is it ?
     correct ->
@@ -622,367 +657,134 @@ questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
        questions_parsing_tests(Questions)]
   end.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% Resource Record Parsing testing %%%%%%%%%
 
+%% @doc . 
+%% @private Internal helper function.
+%% @since 0.2
+build_resource_records(_Domains, _Types, _Classes, _Length) ->
+%%  RDATA = [{cname, Domains},
+%% 	   {hinfo, []},    % Where do we get random hinfos ?
+%% 	   {mx, []},       % Build MX using Domains and a random 16-bits integer.
+%% 	   {ns, Domains},
+%% 	   {ptr, Domains},
+%% 	   {soa, []},      % Build SOA using Domains, root+domains for emails and random values.
+%% 	   {txt, []},      % Build txt with random text.
+%% 	   {a, []},        % Where do we get random IPs ?
+%% 	   {wks, []}],     % is this used anyway ?
+  [].
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%% DNS Message Parsing testing %%%%%%%%%%%
 
+%% @doc . 
+%% @private Internal helper function.
+%% @since 0.2
+build_messages(_Questions, _RRs) ->
+  [].
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% tests(Depth, Length) ->
-%%     [{"Domain parsing", tests_domain_parsing(Depth, Length)}].%,
-%%      %{"Question parsing", tests_question_parsing(Depth, Length)}].%,
-%%      %{"Resource record parsing", tests_resource_record_parsing()},
-%%      %{"Message parsing", tests_message_parsing()}].
-
-%% %%% Testing data
-
-%% %% Some labels (atoms of domain names) to test the parser.
-%% -define(LABELS, [{correct, ["com"], <<3, "com">>},
-%%  		 {correct, ["s"], <<1, "s">>}]).%,
-%%  		 %{correct,["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"],
-%% 		 % <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
-%% 		 %{error, ["mail"], <<5, "mail">>}]).
-
-%% %% DNS Types to test the parser.
-%% -define(TYPES, [{correct, a,     << 1:16>>},
-%% 		%{correct, ns,    << 2:16>>},
-%% 		%{correct, md,    << 3:16>>},
-%% 		%{correct, mf,    << 4:16>>},
-%% 		%{correct, cname, << 5:16>>},
-%% 		%{correct, soa,   << 6:16>>},
-%% 		%{correct, mb,    << 7:16>>},
-%% 		%{correct, mg,    << 8:16>>},
-%% 		%{correct, mr,    << 9:16>>},
-%% 		%{correct, null,  <<10:16>>},
-%% 		%{correct, wks,   <<11:16>>},
-%% 		%{correct, ptr,   <<12:16>>},
-%% 		%{correct, hinfo, <<13:16>>},
-%% 		%{correct, minfo, <<14:16>>},
-%% 		%{correct, mx,    <<15:16>>},
-%% 		{correct, txt,   <<16:16>>}]).
-
-%% %% DNS QTypes to test the parser.
-%% -define(QTYPES, [%{correct, axfr,  <<252:16>>},
-%% 		 %{correct, mailb, <<253:16>>},
-%% 		 %{correct, maila, <<254:16>>},
-%% 		 {correct, all,   <<255:16>>}] ++ ?TYPES).
-
-%% %% DNS Classes to test the parser.
-%% -define(CLASSES, [%{correct, in, <<1:16>>},
-%% 		  %{correct, cs, <<2:16>>},
-%% 		  %{correct, ch, <<3:16>>},
-%% 		  {correct, hs, <<4:16>>}]).
-
-%% %% DNS QClasses to test the parser.
-%% -define(QCLASSES, [{correct, any, <<255:16>>}] ++ ?CLASSES).
-
-%% %%% Testing functions.
-
-%% %% @doc Generate tests with all the different combinations of domains.
-%% %% @private Internal helper function.
-%% %% @since 0.2
-%% tests_domain_parsing(Depth, Length) ->
-%%     tests_domain_parsing_(build_domains_up_to(n_of(Depth, ?LABELS), Depth, Length)).
-
-%% %% @doc Generate tests with all the different combinations of domains.
-%% %% @private Internal helper function.
-%% %% @since 0.2
-%% tests_domain_parsing_([]) -> [];
-%% tests_domain_parsing_([{Type, Parsed, Raw}|Domains]) ->
-%%     Noise = list_to_binary(noise()),
-%%     CRaw = <<Raw/binary, 0, Noise/binary>>,      % Complete RAW domain.
-%%     CRightParsed = {domain, Parsed, Noise},      % What would be returned if parsing succeds.
-%%     ParsedToTest = (catch parse_domain(CRaw)),   % Perform the parsing.
-%%     Desc = lists:flatten(io_lib:format("~p, ~p", % Some useful description
-%% 				       [Type, CRightParsed])),
-%%     case Type of   % What kind of test is it ?
-%% 	correct ->
-%% 	    [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
-%% 	     tests_domain_parsing_(Domains)];
-%% 	error   -> 
-%% 	    [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
-%% 			     (ParsedToTest /= CRightParsed))} |    % or plain wrong data (not an exception).
-%% 	     tests_domain_parsing_(Domains)]
-%%     end.
-
-%% tests_question_parsing(Depth, Length) ->
-%%     Domains = build_domains_up_to(?LABELS, Depth, Length),
-%%     Questions = build_questions(Domains, ?QTYPES, ?QCLASSES),
-%%     tests_question_parsing_(
-%%       build_questions_up_to(Questions, Length)).
-
-%% tests_question_parsing_([]) -> [];
-%% tests_question_parsing_([{Type, Count, Parsed, Raw}|Questions]) ->
-%%     Noise = <<>>, % list_to_binary(noise()),
-%%     CRightParsed = {questions, Parsed, Noise},
-%%     ParsedToTest = (catch parse_questions(Count, <<Raw/binary, Noise/binary>>)),
-%%     Desc = lists:flatten(io_lib:format("~nQuestion: ~p~nParsedToTest: ~p~nCRightParsed: ~p~n", % Some useful description
-%% 				       [{Type, Count, Parsed, Raw}, ParsedToTest, CRightParsed])),
-%%     case Type of
-%% 	correct ->
-%% 	    [{Desc, ?_assert(ParsedToTest == CRightParsed)} |
-%% 	     tests_question_parsing_(Questions)];
-%% 	error ->
-%% 	    [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
-%% 			     (ParsedToTest /= CRightParsed))} |    % or plain wrong data (not an exception).
-%% 	     tests_question_parsing_(Questions)]
-%%     end.
-
-%% %%% Helper testing functions.
-
-%% %% @doc Having a set of labels build all the possible domains from those of length 1 to Length.
-%% %% @private Internal helper function.
-%% %% @since 0.2
-%% build_domains_up_to(Domains, Depth, Length) ->
-%%     BuildDomains = fun(N, NewDomains) -> 
-%% 			   NewDomains ++ build_domains(Domains, Length) 
-%% 		   end,
-%%     AllDomains = lists:foldl(BuildDomains, [], lists:seq(1, Length)),
-%%     n_of(Depth, AllDomains).
-
-%% %% @doc Having a set of labels build domains names of N labels.
-%% %% @private Internal helper function.
-%% %% @since 0.2
-%% build_domains(_Domains, 0) -> [];
-%% build_domains(Domains, 1) -> Domains;
-%% build_domains(Domains, Length) ->
-%%     NewDomains = build_domains(Domains, Length - 1),
-%%     Comb = fun(Label) ->                        % Function to combine one label to NewDomains.
-%% 		   one_domain_per_domain(Label, NewDomains) end, 
-%%     lists:flatten(lists:map(Comb, Domains)).
-
-%% %% @doc Having one label combine it with each domain of a list.
-%% %% @private Internal helper function.
-%% %% @since 0.2
-%% one_domain_per_domain({Type, Parsed, Raw}, Domains) ->
-%%     Comb = fun({Type2, Parsed2, Raw2}) ->  % Function to combine two domains.
-%% 		   if (Type == correct) and (Type2 == correct) ->
-%% 			   {correct, lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>};
-%% 		      true ->
-%% 			   {error, lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>}
-%% 		   end
-%% 	   end,
-%%     lists:map(Comb, Domains).
-
-%% build_questions(Depth, Length) ->
-%%     build_questions(build_domains_up_to(?LABELS, Depth, Length), ?QTYPES, ?QCLASSES).
-
-%% build_questions_up_to(Questions, Count) ->
-%%     lists:foldl(
-%%       fun(N, NewQuestions) -> 
-%% 	      NewQuestions ++ build_questions(Questions, N) end,
-%%       [],
-%%       lists:seq(1, Count)).
-
-
-%% build_questions([], _QTypes, _QClasses) -> [];
-%% build_questions(_Domains, [], _QClasses) -> [];
-%% build_questions(_Domains, _QTypes, []) -> [];
-%% build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, {QCType, QCParsed, QCRaw}) ->
-%%     Type = if (DType == correct) and (QTType == correct) and (QCType == correct)-> correct;
-%% 	      true -> error
-%% 	   end,
-%%     {Type, 1, [#question{qname = DParsed, qtype = QTParsed, qclass = QCParsed}],
-%%      <<DRaw/binary, 0, QTRaw/binary, QCRaw/binary>>};
-%% build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, QClasses) ->
-%%     BuildQuestion = fun(QClass) ->
-%% 			    build_questions({DType, DParsed, DRaw},
-%% 					    {QTType, QTParsed, QTRaw}, QClass)
-%% 		    end,
-%%     lists:flatten(lists:map(BuildQuestion, QClasses));
-%% build_questions({DType, DParsed, DRaw}, QTypes, QClasses) ->
-%%     BuildQuestion = fun(QType) ->
-%% 			    build_questions({DType, DParsed, DRaw}, QType, QClasses)
-%% 		    end,
-%%     lists:flatten(lists:map(BuildQuestion, QTypes));
-%% build_questions(Domains, QTypes, QClasses) ->
-%%     BuildQuestion = fun(Domain) ->
-%% 			    build_questions(Domain, QTypes, QClasses)
-%% 		    end,
-%%     lists:flatten(lists:map(BuildQuestion, Domains)).
-
-%% build_questions(_Questions, 0) -> [];
-%% build_questions(Questions, 1) -> Questions;
-%% build_questions(Questions, N) ->
-%%     NewQuestions = build_questions(Questions, N - 1),
-%%     Comb = fun(Question) ->              % Function to combine one label to NewQuestions.
-%% 		   one_question_per_questions(Question, NewQuestions) end, 
-%%     lists:flatten(lists:map(Comb, Questions)).
-
-%% %% @doc Having one label combine it with each domain of a list.
-%% %% @private Internal helper function.
-%% %% @since 0.2
-%% one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
-%%     Comb = fun({Type2, Count2, Parsed2, Raw2}) ->
-%% 		   if (Type == correct) and (Type2 == correct) ->
-%% 			   {correct, Count + Count2,
-%% 			    lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>};
-%% 		      true ->
-%% 			   {error, Count + Count2,
-%% 			    lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>}
-%% 		   end
-%% 	   end,
-%%     lists:map(Comb, Questions).
 
 %%%%%%%%%%%%%%%%%% Old boring tests %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% -define(C, ["com"]).
-%% -define(CB, <<3, "com">>).
-%% -define(PC, ["pupeno"|?C]).
-%% -define(PCB, <<6, "pupeno", ?CB/binary>>).
-%% -define(SPC, ["software"|?PC]).
-%% -define(SPCB, <<8, "software", ?PCB/binary>>).
-%% -define(C_ALL_IN, #question{qname = ?C, qtype = all, qclass = in}).
-%% -define(C_ALL_INB, <<?CB/binary, 0, 255:16, 1:16>>).
-%% -define(C_MX_CS, #question{qname = ?C, qtype = mx, qclass = cs}).
-%% -define(C_MX_CSB, <<?CB/binary, 0, 15:16, 2:16>>).
-%% -define(PC_NS_CH, #question{qname = ?PC, qtype = ns, qclass = ch}).
-%% -define(PC_NS_CHB, <<?PCB/binary, 0, 2:16, 3:16>>).
-%% -define(PC_SOA_HS, #question{qname = ?PC, qtype = soa, qclass = hs}).
-%% -define(PC_SOA_HSB, <<?PCB/binary, 0, 6:16, 4:16>>).
-%% -define(SPC_A_ANY, #question{qname = ?SPC, qtype = a, qclass = any}).
-%% -define(SPC_A_ANYB, <<?SPCB/binary, 0, 1:16, 255:16>>).
-%% -define(SPC_PTR_IN, #question{qname = ?SPC, qtype = ptr, qclass = in}).
-%% -define(SPC_PTR_INB, <<?SPCB/binary, 0, 12:16, 1:16>>).
+-define(C, ["com"]).
+-define(CB, <<3, "com">>).
+-define(PC, ["pupeno"|?C]).
+-define(PCB, <<6, "pupeno", ?CB/binary>>).
+-define(SPC, ["software"|?PC]).
+-define(SPCB, <<8, "software", ?PCB/binary>>).
+-define(C_ALL_IN, #question{qname = ?C, qtype = all, qclass = in}).
+-define(C_ALL_INB, <<?CB/binary, 0, 255:16, 1:16>>).
+-define(C_MX_CS, #question{qname = ?C, qtype = mx, qclass = cs}).
+-define(C_MX_CSB, <<?CB/binary, 0, 15:16, 2:16>>).
+-define(PC_NS_CH, #question{qname = ?PC, qtype = ns, qclass = ch}).
+-define(PC_NS_CHB, <<?PCB/binary, 0, 2:16, 3:16>>).
+-define(PC_SOA_HS, #question{qname = ?PC, qtype = soa, qclass = hs}).
+-define(PC_SOA_HSB, <<?PCB/binary, 0, 6:16, 4:16>>).
+-define(SPC_A_ANY, #question{qname = ?SPC, qtype = a, qclass = any}).
+-define(SPC_A_ANYB, <<?SPCB/binary, 0, 1:16, 255:16>>).
+-define(SPC_PTR_IN, #question{qname = ?SPC, qtype = ptr, qclass = in}).
+-define(SPC_PTR_INB, <<?SPCB/binary, 0, 12:16, 1:16>>).
 
+-define(PCB_, <<?PCB/binary, 0:8>>).
+-define(SPCB_, <<?SPCB/binary, 0:8>>).
+tests_resource_record_parsing() ->
+  PCB_L = length(binary_to_list(?PCB_)),
+  [{"No RR", ?_assert({[], <<>>} == parse_resource_records(0, <<>>))},
+   {"One RR", 
+    [?_assert({[#resource_record{name = ?SPC,
+				 type = cname,
+				 class = in,
+				 ttl = 176800,
+				 rdata = ?PC}], <<>>} == 
+	      parse_resource_records(1, <<?SPCB_/binary, 5:16, 1:16, 176800:32, 
+					 PCB_L:16, ?PCB_/binary>>))]}].
 
-%% %% tests_question_parsing() ->
-%% %%     [{"No question", ?_assert({[], <<>>} == parse_questions(0, <<>>))},
-%% %%      {"One question",
-%% %%       [?_assert({[?C_ALL_IN], <<>>} == parse_questions(1, ?C_ALL_INB)),
-%% %%        ?_assert({[?C_MX_CS], <<>>} == parse_questions(1, ?C_MX_CSB)),
-%% %%        ?_assert({[?PC_NS_CH], <<>>} == parse_questions(1, ?PC_NS_CHB)),
-%% %%        ?_assert({[?PC_SOA_HS], <<>>} == parse_questions(1, ?PC_SOA_HSB)),
-%% %%        ?_assert({[?SPC_A_ANY], <<>>} == parse_questions(1, ?SPC_A_ANYB)),
-%% %%        ?_assert({[?SPC_PTR_IN], <<>>} == parse_questions(1, ?SPC_PTR_INB))]},
-%% %%      {"Two questions",
-%% %%       [?_assert({[?C_ALL_IN, ?C_MX_CS], <<>>} == 
-%% %% 		parse_questions(2, <<?C_ALL_INB/binary, ?C_MX_CSB/binary>>)),
-%% %%        ?_assert({[?C_MX_CS, ?PC_NS_CH], <<>>} == 
-%% %% 		parse_questions(2, <<?C_MX_CSB/binary, ?PC_NS_CHB/binary>>)),
-%% %%        ?_assert({[?PC_NS_CH, ?PC_SOA_HS], <<>>} == 
-%% %% 		parse_questions(2, <<?PC_NS_CHB/binary, ?PC_SOA_HSB/binary>>)),
-%% %%        ?_assert({[?PC_SOA_HS, ?SPC_A_ANY], <<>>} == 
-%% %% 		parse_questions(2, <<?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary>>)),
-%% %%        ?_assert({[?SPC_A_ANY, ?SPC_PTR_IN], <<>>} == 
-%% %% 		parse_questions(2, <<?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>)),
-%% %%        ?_assert({[?SPC_PTR_IN, ?C_ALL_IN], <<>>} == 
-%% %% 		parse_questions(2, <<?SPC_PTR_INB/binary, ?C_ALL_INB/binary>>))]},
-%% %%      {"Three questions",
-%% %%       [?_assert({[?C_ALL_IN, ?C_MX_CS, ?PC_NS_CH], <<>>} == 
-%% %% 		parse_questions(3, <<?C_ALL_INB/binary, ?C_MX_CSB/binary, 
-%% %% 				    ?PC_NS_CHB/binary>>)),
-%% %%        ?_assert({[?C_MX_CS, ?PC_NS_CH, ?PC_SOA_HS], <<>>} == 
-%% %% 		parse_questions(3, <<?C_MX_CSB/binary, ?PC_NS_CHB/binary, 
-%% %% 				    ?PC_SOA_HSB/binary>>)),
-%% %%        ?_assert({[?PC_NS_CH, ?PC_SOA_HS, ?SPC_A_ANY], <<>>} == 
-%% %% 		parse_questions(3, <<?PC_NS_CHB/binary, ?PC_SOA_HSB/binary, 
-%% %% 				    ?SPC_A_ANYB/binary>>)),
-%% %%        ?_assert({[?PC_SOA_HS, ?SPC_A_ANY, ?SPC_PTR_IN], <<>>} == 
-%% %% 		parse_questions(3, <<?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary, 
-%% %% 				    ?SPC_PTR_INB/binary>>)),
-%% %%        ?_assert({[?SPC_A_ANY, ?SPC_PTR_IN, ?C_ALL_IN], <<>>} == 
-%% %% 		parse_questions(3, <<?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary, 
-%% %% 				    ?C_ALL_INB/binary>>)),
-%% %%        ?_assert({[?SPC_PTR_IN, ?C_ALL_IN, ?C_MX_CS], <<>>} == 
-%% %% 		parse_questions(3, <<?SPC_PTR_INB/binary, ?C_ALL_INB/binary, 
-%% %% 				    ?C_MX_CSB/binary>>))]},
-%% %%     {"Six questions",
-%% %%      ?_assert({[?C_ALL_IN, ?C_MX_CS, ?PC_NS_CH, ?PC_SOA_HS, ?SPC_A_ANY, ?SPC_PTR_IN], <<>>} == 
-%% %% 	      parse_questions(6,
-%% %% 			      <<?C_ALL_INB/binary, ?C_MX_CSB/binary, 
-%% %% 			       ?PC_NS_CHB/binary, ?PC_SOA_HSB/binary,
-%% %% 			       ?SPC_A_ANYB/binary, ?SPC_PTR_INB/binary>>))}].
-
-%% -define(PCB_, <<?PCB/binary, 0>>).
-
-%% tests_resource_record_parsing() ->
-%%     PCB_L = length(binary_to_list(?PCB_)),
-%%     [{"No RR", ?_assert({[], <<>>} == parse_resource_records(0, <<>>))},
-%%      {"One RR", 
-%%       [?_assert({[#resource_record{name = ?SPC,
-%% 				   type = cname,
-%% 				   class = in,
-%% 				   ttl = 176800,
-%% 				   rdata = ?PC}], <<>>} == 
-%% 		parse_resource_records(1, <<?SPCB/binary, 0:8,  5:16, 1:16, 176800:32, 
-%% 					   PCB_L:16, ?PCB_/binary>>)),
-%%        ?_assert({[#resource_record{name = ?SPC,
-%% 				   type = cname,
-%% 				   class = in,
-%% 				   ttl = 176800,
-%% 				   rdata = ?PC}], <<>>} == 
-%% 		parse_resource_records(1, <<?SPCB/binary, 0:8,  5:16, 1:16, 176800:32, 
-%% 					   PCB_L:16, ?PCB_/binary>>))]}].
-
-%% tests_message_parsing() ->
-%%     [?_assert(#dns_message{id = 63296, 
-%% 			   qr = query_,
-%% 			   opcode = query_,
-%% 			   aa = false,
-%% 			   tc = false,
-%% 			   rd = true,
-%% 			   ra = false,
-%% 			   rcode = no_error,
-%% 			   question = [],
-%% 			   answer = [],
-%% 			   authority = [],
-%% 			   additional = []} ==
-%% 	     parse_message(<<63296:16, 0:1, 0:4, 0:1, 0:1, 1:1, 0:1, 0:3, 0:4,
-%% 			    0:16, 0:16, 0:16, 0:16>>)),
-%%      ?_assert(#dns_message{id = 13346, 
-%% 			   qr = response,
-%% 			   opcode = status,
-%% 			   aa = true,
-%% 			   tc = true,
-%% 			   rd = false,
-%% 			   ra = true,
-%% 			   rcode = server_failure,
-%% 			   question = [],
-%% 			   answer = [],
-%% 			   authority = [],
-%% 			   additional = []} ==
-%% 	     parse_message(<<13346:16, 1:1, 2:4, 1:1, 1:1, 0:1, 1:1, 0:3, 2:4,
-%% 			    0:16, 0:16, 0:16, 0:16>>)),
-%%     ?_assert(#dns_message{id = 63296, 
-%% 			   qr = query_,
-%% 			   opcode = iquery,
-%% 			   aa = false,
-%% 			   tc = false,
-%% 			   rd = true,
-%% 			   ra = false,
-%% 			   rcode = refused,
-%% 			   question = [?C_ALL_IN],
-%% 			   answer = [],
-%% 			   authority = [],
-%% 			   additional = []} ==
-%% 	     parse_message(<<63296:16, 0:1, 1:4, 0:1, 0:1, 1:1, 0:1, 0:3, 5:4,
-%% 			    1:16, 0:16, 0:16, 0:16,?C_ALL_INB/binary >>)),
-%%     ?_assert(#dns_message{id = 63296, 
-%% 			   qr = query_,
-%% 			   opcode = query_,
-%% 			   aa = false,
-%% 			   tc = false,
-%% 			   rd = true,
-%% 			   ra = false,
-%% 			   rcode = format_error,
-%% 			   question = [?C_ALL_IN, ?C_MX_CS, ?PC_NS_CH, 
-%% 				       ?PC_SOA_HS, ?SPC_A_ANY, ?SPC_PTR_IN],
-%% 			   answer = [],
-%% 			   authority = [],
-%% 			   additional = []} ==
-%% 	     parse_message(<<63296:16, 0:1, 0:4, 0:1, 0:1, 1:1, 0:1, 0:3, 1:4,
-%% 			    6:16, 0:16, 0:16, 0:16, ?C_ALL_INB/binary, ?C_MX_CSB/binary, 
-%% 			    ?PC_NS_CHB/binary, ?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary,
-%% 			    ?SPC_PTR_INB/binary>>))].
+tests_message_parsing() ->
+  [?_assert(#dns_message{id = 63296, 
+			 qr = query_,
+			 opcode = query_,
+			 aa = false,
+			 tc = false,
+			 rd = true,
+			 ra = false,
+			 rcode = no_error,
+			 question = [],
+			 answer = [],
+			 authority = [],
+			 additional = []} ==
+	    parse_message(<<63296:16, 0:1, 0:4, 0:1, 0:1, 1:1, 0:1, 0:3, 0:4,
+			   0:16, 0:16, 0:16, 0:16>>)),
+   ?_assert(#dns_message{id = 13346, 
+			 qr = response,
+			 opcode = status,
+			 aa = true,
+			 tc = true,
+			 rd = false,
+			 ra = true,
+			 rcode = server_failure,
+			 question = [],
+			 answer = [],
+			 authority = [],
+			 additional = []} ==
+	    parse_message(<<13346:16, 1:1, 2:4, 1:1, 1:1, 0:1, 1:1, 0:3, 2:4,
+			   0:16, 0:16, 0:16, 0:16>>)),
+   ?_assert(#dns_message{id = 63296, 
+			 qr = query_,
+			 opcode = iquery,
+			 aa = false,
+			 tc = false,
+			 rd = true,
+			 ra = false,
+			 rcode = refused,
+			 question = [?C_ALL_IN],
+			 answer = [],
+			 authority = [],
+			 additional = []} ==
+	    parse_message(<<63296:16, 0:1, 1:4, 0:1, 0:1, 1:1, 0:1, 0:3, 5:4,
+			   1:16, 0:16, 0:16, 0:16,?C_ALL_INB/binary >>)),
+   ?_assert(#dns_message{id = 63296, 
+			 qr = query_,
+			 opcode = query_,
+			 aa = false,
+			 tc = false,
+			 rd = true,
+			 ra = false,
+			 rcode = format_error,
+			 question = [?C_ALL_IN, ?C_MX_CS, ?PC_NS_CH, 
+				     ?PC_SOA_HS, ?SPC_A_ANY, ?SPC_PTR_IN],
+			 answer = [],
+			 authority = [],
+			 additional = []} ==
+	    parse_message(<<63296:16, 0:1, 0:4, 0:1, 0:1, 1:1, 0:1, 0:3, 1:4,
+			   6:16, 0:16, 0:16, 0:16, ?C_ALL_INB/binary, ?C_MX_CSB/binary, 
+			   ?PC_NS_CHB/binary, ?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary,
+			   ?SPC_PTR_INB/binary>>))].
 
 %% @doc Return one random item out of a list.
 %% @private Internal helper function.
 %% @since 0.2
 one_of(L) ->
-						%io:fwrite("~w:one_of(~w)~n", [?MODULE, L]),
   lists:nth(random:uniform(length(L)), L).
 
 %% @doc Return N random items out of a list.
