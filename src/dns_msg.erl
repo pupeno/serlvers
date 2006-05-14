@@ -337,14 +337,13 @@ rcode_to_atom(5) -> refused.
 %% @doc Generates and run all tests.
 %% @since 0.2
 test(Factor, Sample) ->
-  Labels = n_of(Sample, ?LABELS),                        %% Take a sample of the labels.
-  Domains = n_of(Sample, build_domains(Labels, Factor)), %% Build the domains and take a sample of it.
+  Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
   DomainParsingTests = domain_parsing_tests(Domains),
   DomainUnparsingTests = domain_unparsing_tests(Domains),
 
-  QTypes = n_of(Sample, ?QTYPES),
-  QClasses = n_of(Sample, ?QCLASSES),
-  Questions = n_of(Sample, build_questions(Domains, QTypes, QClasses, Factor)),
+  %QTypes = n_of(Sample, ?QTYPES),
+  %QClasses = n_of(Sample, ?QCLASSES),
+  Questions = build_questions(Domains, ?QTYPES, ?QCLASSES, Factor, Sample),
   QuestionsParsingTests = questions_parsing_tests(Questions),
 
   %% TODO: make these tests dynamic as the previous ones.
@@ -368,27 +367,29 @@ test(Factor, Sample) ->
 %% @doc Using lables Labels, build all possible domains from those of length 1 to length Length. 
 %% @private Internal helper function.
 %% @since 0.2
-build_domains(Labels, Length) ->
+build_domains(Labels, Length, Sample) ->
+  SampleOfLabels = n_of(Sample, Labels),
   BuildDomains = fun(N, Domains) ->                              % Function to build domains of N length and append it to Domains.
-		     Domains ++ build_domains_(Labels, N)
+		     Domains ++ build_domains_(SampleOfLabels, N, Sample)
 		 end,
   Domains = lists:foldl(BuildDomains, [], lists:seq(1, Length)), % Build all possible domains up to Length.
   NullTerm = fun({Type, ParsedDomain, RawDomain}) ->             % Function to add the null character to the domain.
 		 {Type, ParsedDomain, <<RawDomain/binary, 0>>}
 	     end,
-  lists:map(NullTerm, Domains).                                  % Add the null character to the end of each domains.
+  n_of(Sample, lists:map(NullTerm, Domains)).                                  % Add the null character to the end of each domains.
 
 %% @doc Having a set of labels build domains names of N labels.
 %% @private Internal helper function.
 %% @todo Find a better name for this function.
 %% @since 0.2
-build_domains_(_Labels, 0) -> [];
-build_domains_(Labels, 1) -> Labels;
-build_domains_(Labels, Length) ->
-  Domains = build_domains_(Labels, Length - 1),
+build_domains_(_Labels, 0, _Sample) -> [];
+build_domains_(Labels, 1, Sample) -> n_of(Sample, Labels);
+build_domains_(Labels, Length, Sample) ->
+  Domains = n_of(Sample, build_domains_(Labels, Length - 1, Sample)),
   Comb = fun(Label) ->                        % Function to combine one label to NewDomains.
-	     one_domain_per_domain(Label, Domains) end, 
-  lists:flatten(lists:map(Comb, Labels)).
+	     one_domain_per_domain(Label, Domains)
+	 end, 
+  n_of(10, lists:flatten(lists:map(Comb, Labels))).
 
 %% @doc Having one label combine it with each domain of a list.
 %% @private Internal helper function.
@@ -454,52 +455,54 @@ domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
 %% @doc Using domains Domains, QTypes and QClasses build all possible questions up to length Length (that is, chained questions). 
 %% @private Internal helper function.
 %% @since 0.2
-build_questions(Domains, QTypes, QClasses, Length) ->
-  Questions = build_questions(Domains, QTypes, QClasses),
+build_questions(Domains, QTypes, QClasses, Length, Sample) ->
+  Questions = n_of(Sample, build_questions(Domains, QTypes, QClasses, Sample)),
   BuildQuestions = fun(N, NewQuestions) ->                           % Function to build questions of N length and append it to NewQuestions.
-		       NewQuestions ++ build_questions(Questions, N)
+		       NewQuestions ++ build_questions(Questions, N, Sample)
 		   end,
-  lists:foldl(BuildQuestions, [], lists:seq(1, Length)).
+  n_of(Sample, lists:foldl(BuildQuestions, [], lists:seq(1, Length))).
 
 %% @doc Make all the possible combinations for a set of Domains, QTypes and QClasses. 
 %% @private Internal helper function.
 %% @since 0.2
-build_questions([], _QTypes, _QClasses) -> [];
-build_questions(_Domains, [], _QClasses) -> [];
-build_questions(_Domains, _QTypes, []) -> [];
-build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, {QCType, QCParsed, QCRaw}) ->
+build_questions([], _QTypes, _QClasses, _Sample) -> [];
+build_questions(_Domains, [], _QClasses, _Sample) -> [];
+build_questions(_Domains, _QTypes, [], _Sample) -> [];
+build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, {QCType, QCParsed, QCRaw}, _Sample) ->
   Type = if (DType == correct) and (QTType == correct) and (QCType == correct)-> correct;
 	    true -> error
 	 end,
   {Type, 1, [#question{qname = DParsed, qtype = QTParsed, qclass = QCParsed}],
    <<DRaw/binary, QTRaw/binary, QCRaw/binary>>};
-build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, QClasses) ->
+build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, QClasses, Sample) ->
   BuildQuestion = fun(QClass) ->
-		      build_questions({DType, DParsed, DRaw},
-				      {QTType, QTParsed, QTRaw}, QClass)
+		      Sample, build_questions({DType, DParsed, DRaw},
+					      {QTType, QTParsed, QTRaw},
+					      QClass, Sample)
 		  end,
-  lists:flatten(lists:map(BuildQuestion, QClasses));
-build_questions({DType, DParsed, DRaw}, QTypes, QClasses) ->
+  n_of(Sample, lists:flatten(lists:map(BuildQuestion, QClasses)));
+build_questions({DType, DParsed, DRaw}, QTypes, QClasses, Sample) ->
   BuildQuestion = fun(QType) ->
-		      build_questions({DType, DParsed, DRaw}, QType, QClasses)
+		      n_of(Sample, build_questions({DType, DParsed, DRaw},
+						   QType, QClasses, Sample))
 		  end,
   lists:flatten(lists:map(BuildQuestion, QTypes));
-build_questions(Domains, QTypes, QClasses) ->
+build_questions(Domains, QTypes, QClasses, Sample) ->
   BuildQuestion = fun(Domain) ->
-		      build_questions(Domain, QTypes, QClasses)
+		      n_of(Sample, build_questions(Domain, QTypes, QClasses, Sample))
 		  end,
-  lists:flatten(lists:map(BuildQuestion, Domains)).
+  n_of(Sample, lists:flatten(lists:map(BuildQuestion, Domains))).
 
 %% @doc Combine each question in Question with every other item in Questions up to N. 
 %% @private Internal helper function.
 %% @since 0.2
-build_questions(_Questions, 0) -> [];
-build_questions(Questions, 1) -> Questions;
-build_questions(Questions, N) ->
-  NewQuestions = build_questions(Questions, N - 1),
+build_questions(_Questions, 0, _Sample) -> [];
+build_questions(Questions, 1, Sample) -> n_of(Sample, Questions);
+build_questions(Questions, N, Sample) ->
+  NewQuestions = n_of(Sample, build_questions(Questions, N - 1, Sample)),
   Comb = fun(Question) ->              % Function to combine one question to NewQuestions.
 	     one_question_per_questions(Question, NewQuestions) end, 
-  lists:flatten(lists:map(Comb, Questions)).
+  n_of(Sample, lists:flatten(lists:map(Comb, Questions))).
 
 %% @doc Combine one question with every other list of questions (in Questions).
 %% @private Internal helper function.
@@ -672,11 +675,15 @@ one_of(L) ->
 %% @private Internal helper function.
 %% @todo tail-optimize.
 %% @since 0.2
-n_of(0, _L) ->
-  [];
 n_of(N, L) ->
   if length(L) < N -> L;
-     true -> [one_of(L)|n_of(N - 1, L)]
+     true -> n_of(N, L, [])
+  end.
+n_of(0, _L, NL) ->
+  NL;
+n_of(N, L, NL) ->
+  if length(L) =< N -> L;
+     true -> n_of(N - 1, L, [one_of(L)|NL])
   end.
 
 %% @doc Generate some noise, that is a list of random length (less than 15) with random data.
