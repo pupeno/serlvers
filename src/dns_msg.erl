@@ -94,6 +94,29 @@ parse_questions(Count, Body, Questions) ->
       {error, invalid}
   end.
 
+%% @doc Enparse the query section of a DNS message.
+%% @private Internal helper function.
+%% @since 0.2
+unparse_questions({questions, Questions, Rest}) ->
+  %% io:fwrite("~w:unparse_questions(~w)~n", [?MODULE, {questions, Questions, Rest}]),
+  RawQuestions = unparse_questions(Questions),
+  <<RawQuestions/binary, Rest/binary>>;
+unparse_questions(Questions) ->
+  %% io:fwrite("~w:unparse_questions(~w)~n", [?MODULE, Questions]),
+  unparse_questions(<<>>, lists:reverse(Questions)).
+unparse_questions(RawQuestions, []) ->
+  %% io:fwrite("~w:unparse_questions(~w, ~w)~n", [?MODULE, RawQuestions, []]),
+  RawQuestions;
+unparse_questions(RawQuestions, [#question{qname=QName, qtype=QType, qclass=QClass}|Questions]) ->
+  %% io:fwrite("~w:unparse_questions(~w, ~w)~n", [?MODULE, RawQuestions, [#question{qname=QName, qtype=QType, qclass=QClass}|Questions] ]),
+  RawQName = unparse_domain(QName),
+  RawQType = unparse_qtype(QType),
+  RawQClass = unparse_qclass(QClass),
+  unparse_questions(<<RawQName/binary,
+		      RawQType/binary,
+		      RawQClass/binary,
+		      RawQuestions/binary>>, Questions).
+
 %% @doc Parse the resource records.
 %% @private Internal helper function.
 %% @since 0.2
@@ -215,6 +238,26 @@ type_to_atom(14) -> minfo;
 type_to_atom(15) -> mx;
 type_to_atom(16) -> txt.
 
+%% @doc Unparse a DNS type.
+%% @private Internal helper function.
+%% @since 0.2
+unparse_type(a) ->     << 1:16>>;
+unparse_type(ns) ->    << 2:16>>;
+unparse_type(md) ->    << 3:16>>;
+unparse_type(mf) ->    << 4:16>>;
+unparse_type(cname) -> << 5:16>>;
+unparse_type(soa) ->   << 6:16>>;
+unparse_type(mb) ->    << 7:16>>;
+unparse_type(mg) ->    << 8:16>>;
+unparse_type(mr) ->    << 9:16>>;
+unparse_type(null) ->  <<10:16>>;
+unparse_type(wks) ->   <<11:16>>;
+unparse_type(ptr) ->   <<12:16>>;
+unparse_type(hinfo) -> <<13:16>>;
+unparse_type(minfo) -> <<14:16>>;
+unparse_type(mx) ->    <<15:16>>;
+unparse_type(txt) ->   <<16:16>>.
+
 %% @doc Turn a numeric DNS qtype into an atom.
 %% @private Internal helper function.
 %% @since 0.2
@@ -224,6 +267,15 @@ qtype_to_atom(254) -> maila;
 qtype_to_atom(255) -> all;
 qtype_to_atom(Type) -> type_to_atom(Type).
 
+%% @doc Unparse a DNS qtype.
+%% @private Internal helper function.
+%% @since 0.2
+unparse_qtype(axfr) ->  <<252:16>>;
+unparse_qtype(mailb) -> <<253:16>>;
+unparse_qtype(maila) -> <<254:16>>;
+unparse_qtype(all) ->   <<255:16>>;
+unparse_qtype(Type) ->  unparse_type(Type).
+
 %% @doc Turn a numeric DNS class into an atom.
 %% @private Internal helper function.
 %% @since 0.2
@@ -232,11 +284,25 @@ class_to_atom(2) -> cs;
 class_to_atom(3) -> ch;
 class_to_atom(4) -> hs.
 
+%% @doc Unparse a DNS class.
+%% @private Internal helper function.
+%% @since 0.2
+unparse_class(in) -> <<1:16>>;
+unparse_class(cs) -> <<2:16>>;
+unparse_class(ch) -> <<3:16>>;
+unparse_class(hs) -> <<4:16>>.
+
 %% @doc Turn a numeric DNS qclass into an atom.
 %% @private Internal helper function.
 %% @since 0.2
 qclass_to_atom(255) -> any;
 qclass_to_atom(Class) -> class_to_atom(Class).
+
+%% @doc Unparse a DNS qclass.
+%% @private Internal helper function.
+%% @since 0.2
+unparse_qclass(any) -> <<255:16>>;
+unparse_qclass(Class) -> unparse_class(Class).
 
 %% @doc Turn a numeric DNS QR into an atom.
 %% @private Internal helper function.
@@ -345,6 +411,7 @@ test(Factor, Sample) ->
   %QClasses = n_of(Sample, ?QCLASSES),
   Questions = build_questions(Domains, ?QTYPES, ?QCLASSES, Factor, Sample),
   QuestionsParsingTests = questions_parsing_tests(Questions),
+  QuestionsUnparsingTests = questions_unparsing_tests(Questions),
 
   %% TODO: make these tests dynamic as the previous ones.
   %%Types = n_of(Sample, ?TYPES),
@@ -357,7 +424,7 @@ test(Factor, Sample) ->
 
 
   eunit:test(DomainParsingTests ++ DomainUnparsingTests ++
-	     QuestionsParsingTests ++ 
+	     QuestionsParsingTests ++ QuestionsUnparsingTests ++
 	     RRsParsingTests ++ 
 	     MessageParsingTests).
 
@@ -520,7 +587,7 @@ one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
 
 
 
-%% @doc Having a list of Domains build all the tests to be used by EUnit.
+%% @doc Having a list of Questions build the parsing tests.
 %% @private Internal helper function.
 %% @todo tail-optimize.
 %% @since 0.2
@@ -539,6 +606,27 @@ questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
       [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
 		       (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
        questions_parsing_tests(Questions)]
+  end.
+
+%% @doc Having a list of Questions build the unparsing tests.
+%% @private Internal helper function.
+%% @todo tail-optimize.
+%% @since 0.2
+questions_unparsing_tests([]) -> [];
+questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
+  Noise = list_to_binary(noise()),
+  CRaw = <<Raw/binary, Noise/binary>>,            % Complete raw, add noise.
+  CParsed = {questions, Parsed, Noise},           % Complete parsed, add signature and noise.
+  RawToTest = (catch unparse_questions(CParsed)), % Perform the unparsing.
+  Desc = lists:flatten(                           % Some useful description
+	   io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, RawToTest])),
+  case Type of   % What kind of test is it ?
+    correct ->
+      [{Desc, ?_assert(RawToTest == CRaw)} | questions_unparsing_tests(Questions)];
+    error   -> 
+      [{Desc, ?_assert((RawToTest == {error, invalid}) or % We should get an error
+		       (RawToTest /= CRaw))} |            % or plain wrong data (not an exception).
+       questions_unparsing_tests(Questions)]
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
