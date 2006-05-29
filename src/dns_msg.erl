@@ -69,9 +69,9 @@ parse_message(RawMsg) ->
   %% TODO: catch or something the return of {error, invalid} to return {error, invalid} from any of the parsing functions.
   %% Parse the questions and each of the other resource record sections.
   {questions, Questions, Rest} = parse_questions(QDCOUNT, Body),
-  {Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
-  {Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
-  {Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
+  {resource_records, Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
+  {resource_records, Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
+  {resource_records, Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
 
   %% Build the messag.
   #dns_message{id = ID, qr = qr_to_atom(QR), opcode = opcode_to_atom(Opcode),
@@ -128,7 +128,7 @@ parse_resource_records(Count, Body) ->
 
 parse_resource_records(0, Body, RRs) ->
   %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
-  {lists:reverse(RRs), Body};
+  {resource_records, lists:reverse(RRs), Body};
 parse_resource_records(Count, Body, RRs) ->
   %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, Count, Body, RRs]),
   {domain, NAME, <<TYPE:16, CLASS:16, TTL:32, _RDLENGTH:16, Rest/binary>>} = parse_domain(Body),
@@ -675,13 +675,15 @@ questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
 -define(SPCB_, <<?SPCB/binary, 0:8>>).
 tests_resource_record_parsing() ->
   PCB_L = length(binary_to_list(?PCB_)),
-  [{"No RR", ?_assert({[], <<>>} == parse_resource_records(0, <<>>))},
+  [{"No RR", ?_assert({resource_records, [], <<>>} == parse_resource_records(0, <<>>))},
    {"One RR", 
-    [?_assert({[#resource_record{name = ?SPC,
+    [?_assert({resource_records,
+	       [#resource_record{name = ?SPC,
 				 type = cname,
 				 class = in,
 				 ttl = 176800,
-				 rdata = ?PC}], <<>>} == 
+				 rdata = ?PC}],
+	       <<>>} == 
 	      parse_resource_records(1, <<?SPCB_/binary, 5:16, 1:16, 176800:32, 
 					 PCB_L:16, ?PCB_/binary>>))]}].
 
