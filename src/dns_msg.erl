@@ -191,15 +191,9 @@ parse_resource_records(Count, Body, RRs) ->
 %% @doc Parse a DNS domain.
 %% @private Internal helper function.
 %% @since 0.2
-parse_domain(Body) ->
-  parse_domain([], Body).
-parse_domain(Labels, <<Length:8, Rest/binary>>) when Length > 0 ->
-  case Rest of
-    <<Label:Length/binary-unit:8, Rest2/binary>> ->
-      parse_domain([binary_to_list(Label)|Labels], Rest2);
-    _Other ->
-      {error, invalid}
-  end;
+parse_domain(Body) -> parse_domain([], Body).
+parse_domain(Labels, <<Length:8, Label:Length/binary-unit:8, Rest/binary>>) when Length > 0 ->
+  parse_domain([binary_to_list(Label)|Labels], Rest);
 parse_domain(Labels, <<Length:8, Rest/binary>>) when Length == 0 ->
   {domain, lists:reverse(Labels), Rest};
 parse_domain(_Labels, _Body) ->
