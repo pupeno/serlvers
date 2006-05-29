@@ -28,7 +28,7 @@
 %% @since 0.2
 -record(dns_message, {
 	  id,        % Assigned by the program that generates queries. This identifier is copied to the corresponding reply and can be used by the requester to match up replies to outstanding queries.
-	  qr,        % Whether this message is a query ('False'), or a response ('True').
+	  qr,        % Whether this message is a query false, or a response true.
 	  opcode,    % Kind of query in this message.  This value is set by the originator of a query and copied into the response.
 	  aa,        % The responding name server is an authority for the domain name in question section.
 	  tc,        % Specifies that this message was truncated due to length greater than that permitted on the transmission channel.
@@ -36,9 +36,9 @@
 	  ra,        % Is set or cleared in a response, and denotes whether recursive query support is available in the name server.
 	  rcode,     % Type of the response.
 	  question,  % The question for the name server.
-	  answer,    % 'ResourceRecord's answering the question.
-	  authority, % 'ResourceRecord's pointing toward an authority.
-	  additional % 'ResourceRecord's holding additional information.
+	  answer,    % ResourceRecords answering the question.
+	  authority, % ResourceRecords pointing toward an authority.
+	  additional % ResourceRecords holding additional information.
 	 }).
 
 -record(question, {
@@ -56,34 +56,40 @@
 	 }).
 
 
-%% @doc Given a binary string representing a DNS message (the incomming from the network) return the same DNS message represented as records.
+%% @doc Given a binary representing a DNS message (incomming from the network) return the same DNS message represented as records.
 %% @private Internal helper function.
 %% @since 0.2
 parse_message(RawMsg) ->
   %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
+
+  %% Separate header (in each of it fields) and body.
   <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, 
    ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
+  
+  %% TODO: catch or something the return of {error, invalid} to return {error, invalid} from any of the parsing functions.
+  %% Parse the questions and each of the other resource record sections.
   {questions, Questions, Rest} = parse_questions(QDCOUNT, Body),
   {Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
   {Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
   {Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
+
+  %% Build the messag.
   #dns_message{id = ID, qr = qr_to_atom(QR), opcode = opcode_to_atom(Opcode),
 	       aa = bool_to_atom(AA), tc = bool_to_atom(TC), rd = bool_to_atom(RD),
 	       ra = bool_to_atom(RA), rcode = rcode_to_atom(RCODE), question = Questions,
 	       answer = Answer, authority = Authority, additional = Additional}.
 
+
 %% @doc Parse the query section of a DNS message.
+%%      Returns {questions, Questions, Rest} where Question is the list of parsed questions and Rest is the rest of the binary message that was not parsed.
+%% @spec parse_questions(integer(), binary()) -> {questions, Questions, Rest} | {error, invalid}
 %% @private Internal helper function.
 %% @since 0.2
-parse_questions(Count, Body) ->
-  %%io:fwrite("~w:parse_questions(~w, ~w)~n", [?MODULE, Count, Body]),
-  parse_questions(Count, Body, []).
+parse_questions(Count, Body) -> parse_questions(Count, Body, []).
 
-parse_questions(0, Body, Questions) ->
-  %%io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, 0, Body, Questions]),
-  {questions, lists:reverse(Questions), Body};
-parse_questions(Count, Body, Questions) ->
-  %%io:fwrite("~w:parse_questions(~w, ~w, ~w)~n", [?MODULE, Count, Body, Questions]),
+parse_questions(0, Rest, Questions) -> {questions, lists:reverse(Questions), Rest};
+parse_questions(Count, Body, Questions) ->  
+  %% To parse a question, first parse the domain. T
   case parse_domain(Body) of
     {domain, QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} ->
       parse_questions(Count - 1, Rest,
@@ -94,21 +100,17 @@ parse_questions(Count, Body, Questions) ->
       {error, invalid}
   end.
 
-%% @doc Enparse the query section of a DNS message.
+
+%% @doc Unparse the query section of a DNS message. From records, build the binaries.
 %% @private Internal helper function.
 %% @since 0.2
 unparse_questions({questions, Questions, Rest}) ->
-  %% io:fwrite("~w:unparse_questions(~w)~n", [?MODULE, {questions, Questions, Rest}]),
   RawQuestions = unparse_questions(Questions),
   <<RawQuestions/binary, Rest/binary>>;
-unparse_questions(Questions) ->
-  %% io:fwrite("~w:unparse_questions(~w)~n", [?MODULE, Questions]),
-  unparse_questions(<<>>, lists:reverse(Questions)).
-unparse_questions(RawQuestions, []) ->
-  %% io:fwrite("~w:unparse_questions(~w, ~w)~n", [?MODULE, RawQuestions, []]),
-  RawQuestions;
+unparse_questions(Questions) -> unparse_questions(<<>>, lists:reverse(Questions)).
+
+unparse_questions(RawQuestions, []) -> RawQuestions;
 unparse_questions(RawQuestions, [#question{qname=QName, qtype=QType, qclass=QClass}|Questions]) ->
-  %% io:fwrite("~w:unparse_questions(~w, ~w)~n", [?MODULE, RawQuestions, [#question{qname=QName, qtype=QType, qclass=QClass}|Questions] ]),
   RawQName = unparse_domain(QName),
   RawQType = unparse_qtype(QType),
   RawQClass = unparse_qclass(QClass),
@@ -182,6 +184,10 @@ parse_resource_records(Count, Body, RRs) ->
 					   rdata = RDATA}|
 			  RRs]).
 
+%% @doc Resource Record unparsing.
+%% @private Internal helper function.
+%% @since 0.2
+
 %% @doc Parse a DNS domain.
 %% @private Internal helper function.
 %% @since 0.2
@@ -203,17 +209,12 @@ parse_domain(_Labels, _Body) ->
 %% @private Internal helper function.
 %% @since 0.2
 unparse_domain({domain, Domain, Rest}) ->
-  %%io:fwrite("~w:unparse_domain(~w)~n", [?MODULE, {domain, Domain, Rest}]),
   RawDomain = unparse_domain(Domain),
   <<RawDomain/binary, Rest/binary>>;
-unparse_domain(Domain) ->
-  %%io:fwrite("~w:unparse_domain(~w)~n", [?MODULE, Domain]),
-  unparse_domain(<<>>, Domain).
-unparse_domain(RawDomain, []) ->
-  %%io:fwrite("~w:unparse_domain(~w, ~w)~n", [?MODULE, RawDomain, []]),
-  <<RawDomain/binary, 0:8>>;
+unparse_domain(Domain) -> unparse_domain(<<>>, Domain).
+
+unparse_domain(RawDomain, []) -> <<RawDomain/binary, 0:8>>;
 unparse_domain(RawDomain, [Label|Labels]) ->
-  %%io:fwrite("~w:unparse_domain(~w, ~w)~n", [?MODULE, RawDomain, [Label|Labels]]),
   LabelLength = length(Label),
   BinaryLabel = list_to_binary(Label),
   unparse_domain(<<RawDomain/binary, LabelLength:8, BinaryLabel/binary>>, Labels).
@@ -407,8 +408,6 @@ test(Factor, Sample) ->
   DomainParsingTests = domain_parsing_tests(Domains),
   DomainUnparsingTests = domain_unparsing_tests(Domains),
 
-  %QTypes = n_of(Sample, ?QTYPES),
-  %QClasses = n_of(Sample, ?QCLASSES),
   Questions = build_questions(Domains, ?QTYPES, ?QCLASSES, Factor, Sample),
   QuestionsParsingTests = questions_parsing_tests(Questions),
   QuestionsUnparsingTests = questions_unparsing_tests(Questions),
