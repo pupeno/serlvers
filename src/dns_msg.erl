@@ -93,8 +93,8 @@ parse_questions(Count, Body, Questions) ->
   case parse_domain(Body) of
     {domain, QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} ->
       parse_questions(Count - 1, Rest,
-		      [#question{qname = QNAME, qtype = qtype_to_atom(QTYPE),
-				 qclass = qclass_to_atom(QCLASS)}|
+		      [#question{qname = QNAME, qtype = parse_qtype(QTYPE),
+				 qclass = parse_qclass(QCLASS)}|
 		       Questions]);
     {error, invalid} ->
       {error, invalid}
@@ -131,62 +131,41 @@ parse_resource_records(0, Body, RRs) ->
   {resource_records, lists:reverse(RRs), Body};
 parse_resource_records(Count, Body, RRs) ->
   %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, Count, Body, RRs]),
-  {domain, NAME, <<TYPE:16, CLASS:16, TTL:32, _RDLENGTH:16, Rest/binary>>} = parse_domain(Body),
-  case type_to_atom(TYPE) of
-    a ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    ns -> 
-      RDATA = unspecified,
-      Rest2 = Rest;
-    md ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    mf ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    cname ->
-      {domain, RDATA, Rest2} = parse_domain(Rest);
-    soa ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    mb ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    mg ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    mr ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    null ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    wks ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    ptr -> 
-      RDATA = unspecified,
-      Rest2 = Rest;
-    hinfo ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    minfo ->
-      RDATA = unspecified,
-      Rest2 = Rest;
-    mx ->
-      RDATA = unspecified,
-      Rest2 = Rest
-  end,	    
-  parse_resource_records(Count - 1, Rest2,
-			 [#resource_record{name = NAME, type = type_to_atom(TYPE),
-					   class = class_to_atom(CLASS), ttl = TTL,
-					   rdata = RDATA}|
-			  RRs]).
+  %% Parse the domain part and match all the other fields.
+  {domain, 
+   Name, 
+   <<RawType:16, RawClass:16, TTL:32, 
+    RDLength:16, RawRData:RDLength/binary, Rest/binary>>} = parse_domain(Body),
+  Type = parse_type(RawType),
+  Class = parse_class(RawClass),
+  {rdata, RData} = parse_rdata(Type, RawRData),
+  parse_resource_records(Count - 1, Rest,
+			 [#resource_record{name = Name, type = Type,
+					   class = Class, ttl = TTL,
+					   rdata = RData}            | RRs]).
 
-%% @doc Resource Record unparsing.
+%% @doc Parse RDATA, the data of a resource record.
 %% @private Internal helper function.
 %% @since 0.2
+parse_rdata(a,     _RawRData) -> unspecified;
+parse_rdata(ns,    _RawRData) -> unspecified;
+parse_rdata(md,    _RawRData) -> unspecified;
+parse_rdata(mf,    _RawRData) -> unspecified;
+parse_rdata(cname, RawRData) -> 
+  {domain, Domain, _Rest} = parse_domain(RawRData),
+  {rdata, Domain};
+parse_rdata(soa,   _RawRData) -> unspecified;
+parse_rdata(mb,    _RawRData) -> unspecified;
+parse_rdata(mg,    _RawRData) -> unspecified;
+parse_rdata(mr,    _RawRData) -> unspecified;
+parse_rdata(null,  _RawRData) -> unspecified;
+parse_rdata(wks,   _RawRData) -> unspecified;
+parse_rdata(ptr,   _RawRData) -> unspecified;
+parse_rdata(hinfo, _RawRData) -> unspecified;
+parse_rdata(minfo, _RawRData) -> unspecified;
+parse_rdata(mx,    _RawRData) -> unspecified;
+parse_rdata(_Type, _RawRData) ->
+  {error, invalid}.
 
 %% @doc Parse a DNS domain.
 %% @private Internal helper function.
@@ -216,22 +195,22 @@ unparse_domain(RawDomain, [Label|Labels]) ->
 %% @doc Turn a numeric DNS type into an atom.
 %% @private Internal helper function.
 %% @since 0.2
-type_to_atom(1) -> a;
-type_to_atom(2) -> ns;
-type_to_atom(3) -> md;
-type_to_atom(4) -> mf;
-type_to_atom(5) -> cname;
-type_to_atom(6) -> soa;
-type_to_atom(7) -> mb;
-type_to_atom(8) -> mg;
-type_to_atom(9) -> mr;
-type_to_atom(10) -> null;
-type_to_atom(11) -> wks;
-type_to_atom(12) -> ptr;
-type_to_atom(13) -> hinfo;
-type_to_atom(14) -> minfo;
-type_to_atom(15) -> mx;
-type_to_atom(16) -> txt.
+parse_type(1) -> a;
+parse_type(2) -> ns;
+parse_type(3) -> md;
+parse_type(4) -> mf;
+parse_type(5) -> cname;
+parse_type(6) -> soa;
+parse_type(7) -> mb;
+parse_type(8) -> mg;
+parse_type(9) -> mr;
+parse_type(10) -> null;
+parse_type(11) -> wks;
+parse_type(12) -> ptr;
+parse_type(13) -> hinfo;
+parse_type(14) -> minfo;
+parse_type(15) -> mx;
+parse_type(16) -> txt.
 
 %% @doc Unparse a DNS type.
 %% @private Internal helper function.
@@ -256,11 +235,11 @@ unparse_type(txt) ->   <<16:16>>.
 %% @doc Turn a numeric DNS qtype into an atom.
 %% @private Internal helper function.
 %% @since 0.2
-qtype_to_atom(252) -> axfr;
-qtype_to_atom(253) -> mailb;
-qtype_to_atom(254) -> maila;
-qtype_to_atom(255) -> all;
-qtype_to_atom(Type) -> type_to_atom(Type).
+parse_qtype(252) -> axfr;
+parse_qtype(253) -> mailb;
+parse_qtype(254) -> maila;
+parse_qtype(255) -> all;
+parse_qtype(Type) -> parse_type(Type).
 
 %% @doc Unparse a DNS qtype.
 %% @private Internal helper function.
@@ -274,10 +253,10 @@ unparse_qtype(Type) ->  unparse_type(Type).
 %% @doc Turn a numeric DNS class into an atom.
 %% @private Internal helper function.
 %% @since 0.2
-class_to_atom(1) -> in;
-class_to_atom(2) -> cs;
-class_to_atom(3) -> ch;
-class_to_atom(4) -> hs.
+parse_class(1) -> in;
+parse_class(2) -> cs;
+parse_class(3) -> ch;
+parse_class(4) -> hs.
 
 %% @doc Unparse a DNS class.
 %% @private Internal helper function.
@@ -290,8 +269,8 @@ unparse_class(hs) -> <<4:16>>.
 %% @doc Turn a numeric DNS qclass into an atom.
 %% @private Internal helper function.
 %% @since 0.2
-qclass_to_atom(255) -> any;
-qclass_to_atom(Class) -> class_to_atom(Class).
+parse_qclass(255) -> any;
+parse_qclass(Class) -> parse_class(Class).
 
 %% @doc Unparse a DNS qclass.
 %% @private Internal helper function.
