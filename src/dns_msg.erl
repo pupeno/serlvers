@@ -429,7 +429,7 @@ test(Factor, Sample) ->
 	     MessageParsingTests).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%% Domain Parsing testing %%%%%%%%%%%%%%
+%%%%%% Domain Parsing and Unparsing testing %%%%%%
 
 %% @doc Using lables Labels, build all possible domains from those of length 1 to length Length. 
 %% @private Internal helper function.
@@ -443,7 +443,7 @@ build_domains(Labels, Length, Sample) ->
   NullTerm = fun({Type, ParsedDomain, RawDomain}) ->             % Function to add the null character to the domain.
 		 {Type, ParsedDomain, <<RawDomain/binary, 0>>}
 	     end,
-  n_of(Sample, lists:map(NullTerm, Domains)).                                  % Add the null character to the end of each domains.
+  n_of(Sample, lists:map(NullTerm, Domains)).                    % Add the null character to the end of each domains.
 
 %% @doc Having a set of labels build domains names of N labels.
 %% @private Internal helper function.
@@ -517,7 +517,7 @@ domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%% Question Parsing testing %%%%%%%%%%%%%
+%%%%% Question Parsing and Unparsing testing %%%%%
 
 %% @doc Using domains Domains, QTypes and QClasses build all possible questions up to length Length (that is, chained questions). 
 %% @private Internal helper function.
@@ -586,7 +586,6 @@ one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
   lists:map(Comb, Questions).
 
 
-
 %% @doc Having a list of Questions build the parsing tests.
 %% @private Internal helper function.
 %% @todo tail-optimize.
@@ -629,8 +628,8 @@ questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
        questions_unparsing_tests(Questions)]
   end.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%% Resource Record Parsing testing %%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Resource Record Parsing and Unparsing Testing %%
 
 %% @doc . 
 %% @private Internal helper function.
