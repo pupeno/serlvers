@@ -144,6 +144,29 @@ parse_resource_records(Count, Body, RRs) ->
 					   class = Class, ttl = TTL,
 					   rdata = RData}            | RRs]).
 
+%% @doc Unparse resource records.
+%% @private Internal helper function.
+%% @since 0.2
+unparse_resource_record({resource_records, RRs, Rest}) ->
+  RawRRs = unparse_resource_record(RRs),
+  <<RawRRs/binary, Rest/binary>>;
+unparse_resource_record(RRs) -> unparse_resource_record(<<>>, RRs).
+
+unparse_resource_record(RawRRs, []) -> RawRRs;
+unparse_resource_record(RawRRs, [#resource_record{name=Name, type=Type, class=Class, ttl=TTL, rdata=RData}|RRs]) ->
+  RawName = unparse_domain(Name),
+  RawType = unparse_type(Type),
+  RawClass = unparse_class(Class),
+  RawRData = unparse_rdata(Type, RData),
+  RawRDLength = length(RawRData),
+  unparse_resource_record(<<RawRRs/binary,
+                            RawName/binary,
+			    RawType/binary,
+			    RawClass/binary,
+			    TTL:32,
+			    RawRDLength:16,
+                            RawRData/binary>>, RRs).
+
 %% @doc Parse RDATA, the data of a resource record.
 %% @private Internal helper function.
 %% @since 0.2
@@ -166,6 +189,11 @@ parse_rdata(minfo, _RawRData) -> unspecified;
 parse_rdata(mx,    _RawRData) -> unspecified;
 parse_rdata(_Type, _RawRData) ->
   {error, invalid}.
+
+%% @doc Unparse RDATA, the data of a resource record.
+%% @private Internal helper function.
+%% @since 0.2
+unparse_rdata(_Type, _RData) -> <<"caca">>.
 
 %% @doc Parse a DNS domain.
 %% @private Internal helper function.
