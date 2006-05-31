@@ -107,17 +107,17 @@ parse_questions(Count, Body, Questions) ->
 unparse_questions({questions, Questions, Rest}) ->
   RawQuestions = unparse_questions(Questions),
   <<RawQuestions/binary, Rest/binary>>;
-unparse_questions(Questions) -> unparse_questions(<<>>, lists:reverse(Questions)).
+unparse_questions(Questions) -> unparse_questions(<<>>, Questions).
 
 unparse_questions(RawQuestions, []) -> RawQuestions;
 unparse_questions(RawQuestions, [#question{qname=QName, qtype=QType, qclass=QClass}|Questions]) ->
   RawQName = unparse_domain(QName),
   RawQType = unparse_qtype(QType),
   RawQClass = unparse_qclass(QClass),
-  unparse_questions(<<RawQName/binary,
+  unparse_questions(<<RawQuestions/binary,
+		      RawQName/binary,
 		      RawQType/binary,
-		      RawQClass/binary,
-		      RawQuestions/binary>>, Questions).
+		      RawQClass/binary>>, Questions).
 
 %% @doc Parse the resource records.
 %% @private Internal helper function.
