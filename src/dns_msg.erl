@@ -111,7 +111,7 @@ unparse_questions(Questions) -> unparse_questions(<<>>, Questions).
 
 unparse_questions(RawQuestions, []) -> RawQuestions;
 unparse_questions(RawQuestions, [#question{qname=QName, qtype=QType, qclass=QClass}|Questions]) ->
-  RawQName = unparse_domain(QName),
+  {unparse_domain, RawQName} = unparse_domain(QName),
   RawQType = unparse_qtype(QType),
   RawQClass = unparse_qclass(QClass),
   unparse_questions(<<RawQuestions/binary,
@@ -193,7 +193,25 @@ parse_rdata(_Type, _RawRData) ->
 %% @doc Unparse RDATA, the data of a resource record.
 %% @private Internal helper function.
 %% @since 0.2
-unparse_rdata(_Type, _RData) -> <<"caca">>.
+unparse_rdata(a,     _RawRData) -> <<>>;
+unparse_rdata(ns,    _RawRData) -> <<>>;
+unparse_rdata(md,    _RawRData) -> <<>>;
+unparse_rdata(mf,    _RawRData) -> <<>>;
+unparse_rdata(cname, RawRData) -> 
+  {raw_domain, RawDomain, _Rest} = unparse_domain(RawRData),
+  {rdata, RawDomain};
+unparse_rdata(soa,   _RawRData) -> <<>>;
+unparse_rdata(mb,    _RawRData) -> <<>>;
+unparse_rdata(mg,    _RawRData) -> <<>>;
+unparse_rdata(mr,    _RawRData) -> <<>>;
+unparse_rdata(null,  _RawRData) -> <<>>;
+unparse_rdata(wks,   _RawRData) -> <<>>;
+unparse_rdata(ptr,   _RawRData) -> <<>>;
+unparse_rdata(hinfo, _RawRData) -> <<>>;
+unparse_rdata(minfo, _RawRData) -> <<>>;
+unparse_rdata(mx,    _RawRData) -> <<>>;
+unparse_rdata(_Type, _RawRData) -> 
+  {error, invalid}.
 
 %% @doc Parse a DNS domain.
 %% @private Internal helper function.
@@ -210,9 +228,9 @@ parse_domain(_Labels, _Body) ->
 %% @private Internal helper function.
 %% @since 0.2
 unparse_domain({domain, Domain, Rest}) ->
-  RawDomain = unparse_domain(Domain),
-  <<RawDomain/binary, Rest/binary>>;
-unparse_domain(Domain) -> unparse_domain(<<>>, Domain).
+  {raw_domain, RawDomain} = unparse_domain(Domain),
+  {raw_domain, <<RawDomain/binary, Rest/binary>>};
+unparse_domain(Domain) -> {raw_domain, unparse_domain(<<>>, Domain)}.
 
 unparse_domain(RawDomain, []) -> <<RawDomain/binary, 0:8>>;
 unparse_domain(RawDomain, [Label|Labels]) ->
@@ -223,60 +241,71 @@ unparse_domain(RawDomain, [Label|Labels]) ->
 %% @doc Turn a numeric DNS type into an atom.
 %% @private Internal helper function.
 %% @since 0.2
-parse_type(1) -> a;
-parse_type(2) -> ns;
-parse_type(3) -> md;
-parse_type(4) -> mf;
-parse_type(5) -> cname;
-parse_type(6) -> soa;
-parse_type(7) -> mb;
-parse_type(8) -> mg;
-parse_type(9) -> mr;
-parse_type(10) -> null;
-parse_type(11) -> wks;
-parse_type(12) -> ptr;
-parse_type(13) -> hinfo;
-parse_type(14) -> minfo;
-parse_type(15) -> mx;
-parse_type(16) -> txt.
+parse_type(1) -> {type, a};
+parse_type(2) -> {type, ns};
+parse_type(3) -> {type, md};
+parse_type(4) -> {type, mf};
+parse_type(5) -> {type, cname};
+parse_type(6) -> {type, soa};
+parse_type(7) -> {type, mb};
+parse_type(8) -> {type, mg};
+parse_type(9) -> {type, mr};
+parse_type(10) -> {type, null};
+parse_type(11) -> {type, wks};
+parse_type(12) -> {type, ptr};
+parse_type(13) -> {type, hinfo};
+parse_type(14) -> {type, minfo};
+parse_type(15) -> {type, mx};
+parse_type(16) -> {type, txt};
+parse_type(RawType) ->
+  {error, invalid_raw_type, RawType}.
 
 %% @doc Unparse a DNS type.
 %% @private Internal helper function.
 %% @since 0.2
-unparse_type(a) ->     << 1:16>>;
-unparse_type(ns) ->    << 2:16>>;
-unparse_type(md) ->    << 3:16>>;
-unparse_type(mf) ->    << 4:16>>;
-unparse_type(cname) -> << 5:16>>;
-unparse_type(soa) ->   << 6:16>>;
-unparse_type(mb) ->    << 7:16>>;
-unparse_type(mg) ->    << 8:16>>;
-unparse_type(mr) ->    << 9:16>>;
-unparse_type(null) ->  <<10:16>>;
-unparse_type(wks) ->   <<11:16>>;
-unparse_type(ptr) ->   <<12:16>>;
-unparse_type(hinfo) -> <<13:16>>;
-unparse_type(minfo) -> <<14:16>>;
-unparse_type(mx) ->    <<15:16>>;
-unparse_type(txt) ->   <<16:16>>.
+unparse_type(a) ->     {raw_type, << 1:16>>};
+unparse_type(ns) ->    {raw_type, << 2:16>>};
+unparse_type(md) ->    {raw_type, << 3:16>>};
+unparse_type(mf) ->    {raw_type, << 4:16>>};
+unparse_type(cname) -> {raw_type, << 5:16>>};
+unparse_type(soa) ->   {raw_type, << 6:16>>};
+unparse_type(mb) ->    {raw_type, << 7:16>>};
+unparse_type(mg) ->    {raw_type, << 8:16>>};
+unparse_type(mr) ->    {raw_type, << 9:16>>};
+unparse_type(null) ->  {raw_type, <<10:16>>};
+unparse_type(wks) ->   {raw_type, <<11:16>>};
+unparse_type(ptr) ->   {raw_type, <<12:16>>};
+unparse_type(hinfo) -> {raw_type, <<13:16>>};
+unparse_type(minfo) -> {raw_type, <<14:16>>};
+unparse_type(mx) ->    {raw_type, <<15:16>>};
+unparse_type(txt) ->   {raw_type, <<16:16>>};
+unparse_type(Type) ->
+  {error, invalid_type, Type}.
 
 %% @doc Turn a numeric DNS qtype into an atom.
 %% @private Internal helper function.
 %% @since 0.2
-parse_qtype(252) -> axfr;
-parse_qtype(253) -> mailb;
-parse_qtype(254) -> maila;
-parse_qtype(255) -> all;
-parse_qtype(Type) -> parse_type(Type).
+parse_qtype(252) -> {qtype, axfr};
+parse_qtype(253) -> {qtype, mailb};
+parse_qtype(254) -> {qtype, maila};
+parse_qtype(255) -> {qtype, all};
+parse_qtype(RawQType) ->
+  case parse_type(RawQType) of
+    {type, QType} -> {qtype, QType};
+    {error, invalid_raw_type, QType} -> {error, invalid_raw_qtype, QType}
+  end.
 
 %% @doc Unparse a DNS qtype.
 %% @private Internal helper function.
 %% @since 0.2
-unparse_qtype(axfr) ->  <<252:16>>;
-unparse_qtype(mailb) -> <<253:16>>;
-unparse_qtype(maila) -> <<254:16>>;
-unparse_qtype(all) ->   <<255:16>>;
-unparse_qtype(Type) ->  unparse_type(Type).
+unparse_qtype(axfr) ->  {raw_qtype, <<252:16>>};
+unparse_qtype(mailb) -> {raw_qtype, <<253:16>>};
+unparse_qtype(maila) -> {raw_qtype, <<254:16>>};
+unparse_qtype(all) ->   {raw_qtype, <<255:16>>};
+unparse_qtype(QType) ->
+  case unparse_type(QType) of
+    {raw_type, RawQType} -> {raw_qtype, RawQType}
+  {raw_qtype, RawType}.
 
 %% @doc Turn a numeric DNS class into an atom.
 %% @private Internal helper function.
@@ -503,7 +532,7 @@ domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
   Noise = list_to_binary(noise()),
   CRaw = <<Raw/binary, Noise/binary>>,         % Complete raw, add noise
   CParsed = {domain, Parsed, Noise},           % Complete parsed, add signature and noise.
-  RawToTest = (catch unparse_domain(CParsed)), % Perform the unparsing.
+  {raw_domain, RawToTest} = (catch unparse_domain(CParsed)), % Perform the unparsing.
   Desc = lists:flatten(                        % Some useful description
 	   io_lib:format("~w, ~w, ~w, ~w", [Type, CParsed, CRaw, RawToTest])),
 
