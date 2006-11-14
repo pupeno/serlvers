@@ -99,27 +99,27 @@ stop(Name) ->
 %% @private Only called from {@link init}.
 %% @since 0.1.0
 acceptor(tcp, Module, LSocket) ->
-    %io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, tcp, Module, LSocket]),
+	 %%io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, tcp, Module, LSocket]),
     case gen_tcp:accept(LSocket) of                        % Wait for an incomming connection.
-	{ok, Socket} ->
-	    {ok, Pid} = Module:start(),                    % Run a worker.
-	    ok = gen_tcp:controlling_process(Socket, Pid), % Let the worker control this connection.
-	    Pid ! {connected, Socket},                     % Worker, wake up, you have to work (this is for the cases where upon connection, the worker has to do something, like daytime and time, unlike echo).
-	    ok = inet:setopts(LSocket, [{active, once}]),  % Enable accepting one connection.
-	    acceptor(tcp, Module, LSocket);                % Wait for the next connection.
-	{error, Reason} ->
-	    {error, Reason}
+		  {ok, Socket} ->
+				{ok, Pid} = Module:start(),                    % Run a worker.
+				ok = gen_tcp:controlling_process(Socket, Pid), % Let the worker control this connection.
+				Pid ! {connected, Socket},                     % Worker, wake up, you have to work (this is for the cases where upon connection, the worker has to do something, like daytime and time, unlike echo).
+				ok = inet:setopts(LSocket, [{active, once}]),  % Enable accepting one connection.
+				acceptor(tcp, Module, LSocket);                % Wait for the next connection.
+		  {error, Reason} ->
+				{error, Reason}
     end;
 acceptor(udp, Module, LSocket) ->
-    %io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, udp, Module, LSocket]),
+	 %%io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, udp, Module, LSocket]),
     receive                                               % Wait for a message.
         {udp, LSocket, IP, InPortNo, Packet} ->            % The message is an UDP packet. 
             {ok, Pid} = Module:start(),                   % Start the worker to do something with it.
             Pid ! {udp, LSocket, IP, InPortNo, Packet},    % Send the packet to the worker.
-	    ok = inet:setopts(LSocket, [{active, once}]), % Enable accepting one packet.
+				ok = inet:setopts(LSocket, [{active, once}]), % Enable accepting one packet.
             acceptor(udp, Module, LSocket);               % Wait for the next packet.
         Other ->
-	    error_logger:error_msg("Error: Process ~w got unknown msg ~w~n.", [self(), Other]),
+				error_logger:error_msg("Error: Process ~w got unknown msg ~w~n.", [self(), Other]),
             acceptor(udp, Module, LSocket)   % TODO: do some logging ? we received an unexpectde message.    
     end.
     
