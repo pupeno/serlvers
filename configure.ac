@@ -1,4 +1,4 @@
-AC_INIT(Modules to write servers, 0.0.0, pupeno@pupeno.com, serlvers)
+AC_INIT(Modules to write servers, 0.1.0, pupeno@pupeno.com, serlvers)
 AC_COPYRIGHT(Copyright (C) 2006 Jose Pablo Pupeno Fernandez)
 
 dnl Require autoconf version >=2.59c. first one with erlang macros
