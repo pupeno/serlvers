@@ -10,6 +10,5 @@ erlapp_DATA = serlvers.app
 EXTRA_DIST = $(erlsrc_DATA) $(erlapp_DATA)
 CLEANFILES = $(erlbeam_DATA)
 
-SUFFIXES = .erl .beam
-.erl.beam:
+%.beam: %.erl
 	$(ERLC) $(ERLCFLAGS) -b beam $<
