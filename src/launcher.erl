@@ -120,9 +120,9 @@ acceptor(udp, Module, LSocket) ->
             acceptor(udp, Module, LSocket);               % Wait for the next packet.
         Other ->
 				error_logger:error_msg("Error: Process ~w got unknown msg ~w~n.", [self(), Other]),
-            acceptor(udp, Module, LSocket)   % TODO: do some logging ? we received an unexpectde message.    
+            acceptor(udp, Module, LSocket)   % TODO: do some logging ? we received an unexpectde message.
     end.
-    
+
 %% @doc Called by gen_server to initialize the launcher.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0

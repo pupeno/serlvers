@@ -63,9 +63,9 @@ parse_message(RawMsg) ->
   %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
 
   %% Separate header (in each of it fields) and body.
-  <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, 
+  <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16,
    ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
-  
+
   %% TODO: catch or something the return of {error, invalid} to return {error, invalid} from any of the parsing functions.
   %% Parse the questions and each of the other resource record sections.
   {questions, Questions, Rest} = parse_questions(QDCOUNT, Body),
@@ -88,7 +88,7 @@ parse_message(RawMsg) ->
 parse_questions(Count, Body) -> parse_questions(Count, Body, []).
 
 parse_questions(0, Rest, Questions) -> {questions, lists:reverse(Questions), Rest};
-parse_questions(Count, Body, Questions) ->  
+parse_questions(Count, Body, Questions) ->
   %% To parse a question, first parse the domain. T
   case parse_domain(Body) of
     {domain, QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} ->
@@ -132,9 +132,9 @@ parse_resource_records(0, Body, RRs) ->
 parse_resource_records(Count, Body, RRs) ->
   %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, Count, Body, RRs]),
   %% Parse the domain part and match all the other fields.
-  {domain, 
-   Name, 
-   <<RawType:16, RawClass:16, TTL:32, 
+  {domain,
+   Name,
+   <<RawType:16, RawClass:16, TTL:32,
     RDLength:16, RawRData:RDLength/binary, Rest/binary>>} = parse_domain(Body),
   Type = parse_type(RawType),
   Class = parse_class(RawClass),
@@ -174,7 +174,7 @@ parse_rdata(a,     _RawRData) -> unspecified;
 parse_rdata(ns,    _RawRData) -> unspecified;
 parse_rdata(md,    _RawRData) -> unspecified;
 parse_rdata(mf,    _RawRData) -> unspecified;
-parse_rdata(cname, RawRData) -> 
+parse_rdata(cname, RawRData) ->
   {domain, Domain, _Rest} = parse_domain(RawRData),
   {rdata, Domain};
 parse_rdata(soa,   _RawRData) -> unspecified;
@@ -539,7 +539,7 @@ rcode_to_atom(5) -> refused.
 %%   case Type of % What kind of test is it ?
 %%     correct ->
 %%       [{Desc, ?_assert(RawToTest == CRaw)} | domain_unparsing_tests(Domains)];
-%%     error   -> 
+%%     error   ->
 %%       [{Desc, ?_assert((RawToTest == {error, invalid}) or % We should get an error
 %% 		       (RawToTest /= CRaw))} |            % or plain wrong data (not an exception).
 %%        domain_unparsing_tests(Domains)]
