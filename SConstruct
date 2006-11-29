@@ -27,7 +27,7 @@ sources = ["src/launcher.erl",
            "src/gen_dns.erl"]
 
 # Compile the sources to beams.
-beams = env.Erlang(sources)
+beams = env.Erlang(sources, OUTPUT="ebin")
 
 # Install directories.
 installDir = "$PREFIX/lib/serlvers-0.1.0/"
