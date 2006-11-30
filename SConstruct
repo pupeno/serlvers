@@ -27,14 +27,14 @@ sources = ["src/launcher.erl",
            "src/gen_dns.erl"]
 
 # Compile the sources to beams.
-beams = env.Erlang(sources, OUTPUT="ebin")
+beams = env.Erlang(sources)
 
 # Install directories.
 installDir = "$PREFIX/lib/serlvers-0.1.0/"
 
 # chicken.py, no build needed.
 env.Install(installDir + "ebin/", beams)
-env.Install(installDir + "ebin/", "src/serlvers.app")
+env.Install(installDir + "ebin/", "ebin/serlvers.app")
 env.Install(installDir + "src/", sources)
 
 # Alias for installing.
