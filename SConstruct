@@ -10,14 +10,16 @@
 env = Environment(tools = ["default", "erlang"])
 
 # Configuration.
-configFile = ".Serlvers.conf"
-opts = Options(configFile)
-opts.Add(PathOption("PREFIX", "Prefix directory (where Erlang is installed)", "/usr/local/lib/erlang/"))
-opts.Update(env)
-opts.Save(configFile, env)
+options = Options("options.cache")
+options.Add(PathOption("PREFIX", "Prefix directory (where Erlang is installed)", "/usr/local/lib/erlang/"))
+
+env = Environment(tools = ["default", "erlang"], options=options)
+
+# Save the options
+options.Save(options.files[0], env)
 
 # Help.
-Help(opts.GenerateHelpText(env))
+Help(options.GenerateHelpText(env))
 
 sources = ["src/launcher.erl",
            "src/gen_echo.erl",
