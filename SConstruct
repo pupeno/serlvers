@@ -13,7 +13,7 @@ options.Add(PathOption("PREFIX", "Prefix directory (where Erlang is installed)",
 
 env = Environment(tools = ["default", "erlang"], options=options)
 
-# Save the options
+# Save the options.
 options.Save(options.files[0], env)
 
 # Help.
