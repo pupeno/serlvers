@@ -41,4 +41,4 @@ env.Install(installDir + "src/", sources)
 env.Alias("install", installDir)
 
 # Documentation
-env.EDoc("doc/index.html", sources)
+env.EDocFiles(sources)
