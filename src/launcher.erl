@@ -186,30 +186,20 @@ code_change(_OldVsn, State, _Extra) ->
 %% @doc Bind an udp or tcp port and be smart about handling the Ip.
 %% @private Internal helper function.
 %% @since 0.2.0
-listen(tcp, Ip, Port) ->
+listen(Transport, Ip, Port) ->
+    Module = case Transport of 
+                 tcp -> gen_tcp;
+                 udp -> gen_udp
+             end,                   
     if Ip == all ->                                % Bind all the ip addresses.
             %% TODO: if the system doesn't support IPv6, this is likely to give an error, then we should run re-run this on IPv4 (only), that is, with inet.
-            gen_tcp:listen(Port, [{active, once}, inet6]);
+            Module:listen(Port, [{active, once}, inet6]);
        true ->
             IpLength = length(tuple_to_list(Ip)),
             if IpLength == 8 ->                    % Bind an IPv6 address.
-                    gen_tcp:listen(Port, [{active, once}, {ip, Ip}, inet6]);
+                    Module:listen(Port, [{active, once}, {ip, Ip}, inet6]);
                IpLength == 4 ->                    % Bind an IPv4 address.
-                    gen_tcp:listen(Port, [{active, once}, {ip, Ip}, inet]);
-               true ->
-                    {error,einval}
-            end
-    end;
-listen(udp, Ip, Port) ->
-    if Ip == all ->                                % Bind all the ip addresses.
-            %% TODO: if the system doesn't support IPv6, this is likely to give an error, then we should run re-run this on IPv4 (only), that is, with inet.
-            gen_udp:listen(Port, [{active, once}, inet6]);
-       true ->
-            IpLength = length(tuple_to_list(Ip)),
-            if IpLength == 8 ->                    % Bind an IPv6 address.
-                    gen_udp:listen(Port, [{active, once}, {ip, Ip}, inet6]);
-               IpLength == 4 ->                    % Bind an IPv4 address.
-                    gen_udp:listen(Port, [{active, once}, {ip, Ip}, inet]);
+                    Module:listen(Port, [{active, once}, {ip, Ip}, inet]);
                true ->
                     {error,einval}
             end
