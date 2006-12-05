@@ -187,20 +187,20 @@ code_change(_OldVsn, State, _Extra) ->
 %% @private Internal helper function.
 %% @since 0.2.0
 listen(Transport, Ip, Port) ->
-    Module = case Transport of 
-                 tcp -> gen_tcp;
-                 udp -> gen_udp
-             end,                   
+    Bind = case Transport of 
+                     tcp -> fun gen_tcp:listen/2;
+                     udp -> fun gen_udp:open/2
+                 end,                   
     if Ip == all ->                                % Bind all the ip addresses.
             %% TODO: if the system doesn't support IPv6, this is likely to give an error, then we should run re-run this on IPv4 (only), that is, with inet.
-            Module:listen(Port, [{active, once}, inet6]);
+            Bind(Port, [{active, once}, inet6]);
        true ->
             IpLength = length(tuple_to_list(Ip)),
             if IpLength == 8 ->                    % Bind an IPv6 address.
-                    Module:listen(Port, [{active, once}, {ip, Ip}, inet6]);
+                    Bind(Port, [{active, once}, {ip, Ip}, inet6]);
                IpLength == 4 ->                    % Bind an IPv4 address.
-                    Module:listen(Port, [{active, once}, {ip, Ip}, inet]);
+                    Bind(Port, [{active, once}, {ip, Ip}, inet]);
                true ->
-                    {error,einval}
+                    {error, einval}
             end
     end.
