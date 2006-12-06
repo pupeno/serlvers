@@ -26,7 +26,8 @@ sources = ["src/launcher.erl",
            "src/gen_chargen.erl",
            "src/gen_daytime.erl",
            "src/gen_time.erl",
-           "src/gen_dns.erl"]
+           "src/gen_dns.erl",
+           "src/dns_msg.erl"]
 
 # Compile the sources to beams.
 beams = env.Erlang(sources)
