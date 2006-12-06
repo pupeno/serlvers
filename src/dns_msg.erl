@@ -59,24 +59,24 @@
 %% @private Internal helper function.
 %% @since 0.2.0
 parse_message(RawMsg) ->
-  %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
+    %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
 
-  %% Separate header (in each of it fields) and body.
-  <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16,
-   ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
+    %% Separate header (in each of it fields) and body.
+    <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16,
+     ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
 
-  %% TODO: catch or something the return of {error, invalid} to return {error, invalid} from any of the parsing functions.
-  %% Parse the questions and each of the other resource record sections.
-  {questions, Questions, Rest} = parse_questions(QDCOUNT, Body),
-  {resource_records, Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
-  {resource_records, Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
-  {resource_records, Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
+    %% TODO: catch or something the return of {error, invalid} to return {error, invalid} from any of the parsing functions.
+    %% Parse the questions and each of the other resource record sections.
+    {questions, Questions, Rest} = parse_questions(QDCOUNT, Body),
+    {resource_records, Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
+    {resource_records, Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
+    {resource_records, Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
 
-  %% Build the messag.
-  #dns_message{id = ID, qr = qr_to_atom(QR), opcode = opcode_to_atom(Opcode),
-	       aa = bool_to_atom(AA), tc = bool_to_atom(TC), rd = bool_to_atom(RD),
-	       ra = bool_to_atom(RA), rcode = rcode_to_atom(RCODE), question = Questions,
-	       answer = Answer, authority = Authority, additional = Additional}.
+    %% Build the messag.
+    #dns_message{id = ID, qr = qr_to_atom(QR), opcode = opcode_to_atom(Opcode),
+                 aa = bool_to_atom(AA), tc = bool_to_atom(TC), rd = bool_to_atom(RD),
+                 ra = bool_to_atom(RA), rcode = rcode_to_atom(RCODE), question = Questions,
+                 answer = Answer, authority = Authority, additional = Additional}.
 
 
 %% @doc Parse the query section of a DNS message.
@@ -88,83 +88,83 @@ parse_questions(Count, Body) -> parse_questions(Count, Body, []).
 
 parse_questions(0, Rest, Questions) -> {questions, lists:reverse(Questions), Rest};
 parse_questions(Count, Body, Questions) ->
-  %% To parse a question, first parse the domain. T
-  case parse_domain(Body) of
-    {domain, QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} ->
-      parse_questions(Count - 1, Rest,
-		      [#question{qname = QNAME, qtype = parse_qtype(QTYPE),
-				 qclass = parse_qclass(QCLASS)}|
-		       Questions]);
-    {error, invalid} ->
-      {error, invalid}
-  end.
+    %% To parse a question, first parse the domain. T
+    case parse_domain(Body) of
+        {domain, QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} ->
+            parse_questions(Count - 1, Rest,
+                            [#question{qname = QNAME, qtype = parse_qtype(QTYPE),
+                                       qclass = parse_qclass(QCLASS)}|
+                             Questions]);
+        {error, invalid} ->
+            {error, invalid}
+    end.
 
 
 %% @doc Unparse the query section of a DNS message. From records, build the binaries.
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_questions({questions, Questions, Rest}) ->
-  RawQuestions = unparse_questions(Questions),
-  <<RawQuestions/binary, Rest/binary>>;
+    RawQuestions = unparse_questions(Questions),
+    <<RawQuestions/binary, Rest/binary>>;
 unparse_questions(Questions) -> unparse_questions(<<>>, Questions).
 
 unparse_questions(RawQuestions, []) -> RawQuestions;
 unparse_questions(RawQuestions, [#question{qname=QName, qtype=QType, qclass=QClass}|Questions]) ->
-  {unparse_domain, RawQName} = unparse_domain(QName),
-  RawQType = unparse_qtype(QType),
-  RawQClass = unparse_qclass(QClass),
-  unparse_questions(<<RawQuestions/binary,
-		      RawQName/binary,
-		      RawQType/binary,
-		      RawQClass/binary>>, Questions).
+    {unparse_domain, RawQName} = unparse_domain(QName),
+    RawQType = unparse_qtype(QType),
+    RawQClass = unparse_qclass(QClass),
+    unparse_questions(<<RawQuestions/binary,
+                       RawQName/binary,
+                       RawQType/binary,
+                       RawQClass/binary>>, Questions).
 
 %% @doc Parse the resource records.
 %% @private Internal helper function.
 %% @since 0.2.0
 parse_resource_records(Count, Body) ->
-  %%io:fwrite("~w:parse_resource_records(~w, ~w)~n", [?MODULE, Count, Body]),
-  parse_resource_records(Count, Body, []).
+    %%io:fwrite("~w:parse_resource_records(~w, ~w)~n", [?MODULE, Count, Body]),
+    parse_resource_records(Count, Body, []).
 
 parse_resource_records(0, Body, RRs) ->
-  %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
-  {resource_records, lists:reverse(RRs), Body};
+    %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, 0, Body, RRs]),
+    {resource_records, lists:reverse(RRs), Body};
 parse_resource_records(Count, Body, RRs) ->
-  %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, Count, Body, RRs]),
-  %% Parse the domain part and match all the other fields.
-  {domain,
-   Name,
-   <<RawType:16, RawClass:16, TTL:32,
-    RDLength:16, RawRData:RDLength/binary, Rest/binary>>} = parse_domain(Body),
-  Type = parse_type(RawType),
-  Class = parse_class(RawClass),
-  {rdata, RData} = parse_rdata(Type, RawRData),
-  parse_resource_records(Count - 1, Rest,
-			 [#resource_record{name = Name, type = Type,
-					   class = Class, ttl = TTL,
-					   rdata = RData}            | RRs]).
+    %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, Count, Body, RRs]),
+    %% Parse the domain part and match all the other fields.
+    {domain,
+     Name,
+     <<RawType:16, RawClass:16, TTL:32,
+      RDLength:16, RawRData:RDLength/binary, Rest/binary>>} = parse_domain(Body),
+    Type = parse_type(RawType),
+    Class = parse_class(RawClass),
+    {rdata, RData} = parse_rdata(Type, RawRData),
+    parse_resource_records(Count - 1, Rest,
+                           [#resource_record{name = Name, type = Type,
+                                             class = Class, ttl = TTL,
+                                             rdata = RData}            | RRs]).
 
 %% @doc Unparse resource records.
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_resource_record({resource_records, RRs, Rest}) ->
-  RawRRs = unparse_resource_record(RRs),
-  <<RawRRs/binary, Rest/binary>>;
+    RawRRs = unparse_resource_record(RRs),
+    <<RawRRs/binary, Rest/binary>>;
 unparse_resource_record(RRs) -> unparse_resource_record(<<>>, RRs).
 
 unparse_resource_record(RawRRs, []) -> RawRRs;
 unparse_resource_record(RawRRs, [#resource_record{name=Name, type=Type, class=Class, ttl=TTL, rdata=RData}|RRs]) ->
-  RawName = unparse_domain(Name),
-  RawType = unparse_type(Type),
-  RawClass = unparse_class(Class),
-  RawRData = unparse_rdata(Type, RData),
-  RawRDLength = length(RawRData),
-  unparse_resource_record(<<RawRRs/binary,
-                            RawName/binary,
-			    RawType/binary,
-			    RawClass/binary,
-			    TTL:32,
-			    RawRDLength:16,
-                            RawRData/binary>>, RRs).
+    RawName = unparse_domain(Name),
+    RawType = unparse_type(Type),
+    RawClass = unparse_class(Class),
+    RawRData = unparse_rdata(Type, RData),
+    RawRDLength = length(RawRData),
+    unparse_resource_record(<<RawRRs/binary,
+                             RawName/binary,
+                             RawType/binary,
+                             RawClass/binary,
+                             TTL:32,
+                             RawRDLength:16,
+                             RawRData/binary>>, RRs).
 
 %% @doc Parse RDATA, the data of a resource record.
 %% @private Internal helper function.
@@ -174,8 +174,8 @@ parse_rdata(ns,    _RawRData) -> unspecified;
 parse_rdata(md,    _RawRData) -> unspecified;
 parse_rdata(mf,    _RawRData) -> unspecified;
 parse_rdata(cname, RawRData) ->
-  {domain, Domain, _Rest} = parse_domain(RawRData),
-  {rdata, Domain};
+    {domain, Domain, _Rest} = parse_domain(RawRData),
+    {rdata, Domain};
 parse_rdata(soa,   _RawRData) -> unspecified;
 parse_rdata(mb,    _RawRData) -> unspecified;
 parse_rdata(mg,    _RawRData) -> unspecified;
@@ -187,7 +187,7 @@ parse_rdata(hinfo, _RawRData) -> unspecified;
 parse_rdata(minfo, _RawRData) -> unspecified;
 parse_rdata(mx,    _RawRData) -> unspecified;
 parse_rdata(_Type, _RawRData) ->
-  {error, invalid}.
+    {error, invalid}.
 
 %% @doc Unparse RDATA, the data of a resource record.
 %% @private Internal helper function.
@@ -197,8 +197,8 @@ unparse_rdata(ns,    _RawRData) -> <<>>;
 unparse_rdata(md,    _RawRData) -> <<>>;
 unparse_rdata(mf,    _RawRData) -> <<>>;
 unparse_rdata(cname, RawRData) -> 
-  {raw_domain, RawDomain, _Rest} = unparse_domain(RawRData),
-  {rdata, RawDomain};
+    {raw_domain, RawDomain, _Rest} = unparse_domain(RawRData),
+    {rdata, RawDomain};
 unparse_rdata(soa,   _RawRData) -> <<>>;
 unparse_rdata(mb,    _RawRData) -> <<>>;
 unparse_rdata(mg,    _RawRData) -> <<>>;
@@ -210,32 +210,32 @@ unparse_rdata(hinfo, _RawRData) -> <<>>;
 unparse_rdata(minfo, _RawRData) -> <<>>;
 unparse_rdata(mx,    _RawRData) -> <<>>;
 unparse_rdata(_Type, _RawRData) -> 
-  {error, invalid}.
+    {error, invalid}.
 
 %% @doc Parse a DNS domain.
 %% @private Internal helper function.
 %% @since 0.2.0
 parse_domain(Body) -> parse_domain([], Body).
 parse_domain(Labels, <<Length:8, Label:Length/binary-unit:8, Rest/binary>>) when Length > 0 ->
-  parse_domain([binary_to_list(Label)|Labels], Rest);
+    parse_domain([binary_to_list(Label)|Labels], Rest);
 parse_domain(Labels, <<Length:8, Rest/binary>>) when Length == 0 ->
-  {domain, lists:reverse(Labels), Rest};
+    {domain, lists:reverse(Labels), Rest};
 parse_domain(_Labels, _Body) ->
-  {error, invalid}.
+    {error, invalid}.
 
 %% @doc Unparse a DNS domain.
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_domain({domain, Domain, Rest}) ->
-  {raw_domain, RawDomain} = unparse_domain(Domain),
-  {raw_domain, <<RawDomain/binary, Rest/binary>>};
+    {raw_domain, RawDomain} = unparse_domain(Domain),
+    {raw_domain, <<RawDomain/binary, Rest/binary>>};
 unparse_domain(Domain) -> {raw_domain, unparse_domain(<<>>, Domain)}.
 
 unparse_domain(RawDomain, []) -> <<RawDomain/binary, 0:8>>;
 unparse_domain(RawDomain, [Label|Labels]) ->
-  LabelLength = length(Label),
-  BinaryLabel = list_to_binary(Label),
-  unparse_domain(<<RawDomain/binary, LabelLength:8, BinaryLabel/binary>>, Labels).
+    LabelLength = length(Label),
+    BinaryLabel = list_to_binary(Label),
+    unparse_domain(<<RawDomain/binary, LabelLength:8, BinaryLabel/binary>>, Labels).
 
 %% @doc Turn a numeric DNS type into an atom.
 %% @private Internal helper function.
@@ -257,7 +257,7 @@ parse_type(14) -> {type, minfo};
 parse_type(15) -> {type, mx};
 parse_type(16) -> {type, txt};
 parse_type(RawType) ->
-  {error, invalid_raw_type, RawType}.
+    {error, invalid_raw_type, RawType}.
 
 %% @doc Unparse a DNS type.
 %% @private Internal helper function.
@@ -279,7 +279,7 @@ unparse_type(minfo) -> {raw_type, <<14:16>>};
 unparse_type(mx) ->    {raw_type, <<15:16>>};
 unparse_type(txt) ->   {raw_type, <<16:16>>};
 unparse_type(Type) ->
-  {error, invalid_type, Type}.
+    {error, invalid_type, Type}.
 
 %% @doc Turn a numeric DNS qtype into an atom.
 %% @private Internal helper function.
@@ -289,10 +289,10 @@ parse_qtype(253) -> {qtype, mailb};
 parse_qtype(254) -> {qtype, maila};
 parse_qtype(255) -> {qtype, all};
 parse_qtype(RawQType) ->
-  case parse_type(RawQType) of
-    {type, QType} -> {qtype, QType};
-    {error, invalid_raw_type, QType} -> {error, invalid_raw_qtype, QType}
-  end.
+    case parse_type(RawQType) of
+        {type, QType} -> {qtype, QType};
+        {error, invalid_raw_type, QType} -> {error, invalid_raw_qtype, QType}
+    end.
 
 %% @doc Unparse a DNS qtype.
 %% @private Internal helper function.
@@ -301,10 +301,10 @@ unparse_qtype(axfr) ->  {raw_qtype, <<252:16>>};
 unparse_qtype(mailb) -> {raw_qtype, <<253:16>>};
 unparse_qtype(maila) -> {raw_qtype, <<254:16>>};
 unparse_qtype(all) ->   {raw_qtype, <<255:16>>}. %;
-%unparse_qtype(QType) ->
-%  case unparse_type(QType) of
-%    {raw_type, RawQType} -> {raw_qtype, RawQType}
-%  {raw_qtype, RawType}.
+                                                %unparse_qtype(QType) ->
+                                                %  case unparse_type(QType) of
+                                                %    {raw_type, RawQType} -> {raw_qtype, RawQType}
+                                                %  {raw_qtype, RawType}.
 
 %% @doc Turn a numeric DNS class into an atom.
 %% @private Internal helper function.
@@ -511,7 +511,7 @@ rcode_to_atom(5) -> refused.
 %%   ParsedToTest = (catch parse_domain(CRaw)),   % Perform the parsing.
 %%   Desc = lists:flatten(                        % Some useful description
 %% 	   io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, ParsedToTest])),
- 
+
 %%   case Type of % What kind of test is it ?
 %%     correct ->
 %%       [{Desc, ?_assert(ParsedToTest == CParsed)} |
