@@ -21,8 +21,7 @@
 
 -compile(export_all).
 
-%%-include_lib("eunit/include/eunit.hrl").
-%%-include_lib("eunit/include/eunit_test.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 %% @ doc Structure defining a DNS message. It is based on what is defined on RFC1035 <http://www.ietf.org/rfc/rfc1035.txt> but it has been re-arranged for easy of use and some fields than are not needed where removed (the counts, which can be calculated out of the length of the lists).
 %% @ since 0.2
