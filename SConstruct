@@ -9,7 +9,7 @@
 
 # Configuration.
 options = Options("options.cache")
-options.Add(
+options.AddOptions(
     PathOption("PREFIX", "Base prefix", "/usr/local"),
     PathOption("ERLANGDIR", "Erlang directory (where Erlang is installed)", "$PREFIX/lib/erlang/"))
 
