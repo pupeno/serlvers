@@ -24,7 +24,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %% @ doc Structure defining a DNS message. It is based on what is defined on RFC1035 <http://www.ietf.org/rfc/rfc1035.txt> but it has been re-arranged for easy of use and some fields than are not needed where removed (the counts, which can be calculated out of the length of the lists).
-%% @ since 0.2
+%% @ since 0.2.0
 -record(dns_message, {
 	  id,        % Assigned by the program that generates queries. This identifier is copied to the corresponding reply and can be used by the requester to match up replies to outstanding queries.
 	  qr,        % Whether this message is a query false, or a response true.
@@ -57,7 +57,7 @@
 
 %% @doc Given a binary representing a DNS message (incomming from the network) return the same DNS message represented as records.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 parse_message(RawMsg) ->
   %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
 
@@ -83,7 +83,7 @@ parse_message(RawMsg) ->
 %%      Returns {questions, Questions, Rest} where Question is the list of parsed questions and Rest is the rest of the binary message that was not parsed.
 %% @spec parse_questions(integer(), binary()) -> {questions, Questions, Rest} | {error, invalid}
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 parse_questions(Count, Body) -> parse_questions(Count, Body, []).
 
 parse_questions(0, Rest, Questions) -> {questions, lists:reverse(Questions), Rest};
@@ -102,7 +102,7 @@ parse_questions(Count, Body, Questions) ->
 
 %% @doc Unparse the query section of a DNS message. From records, build the binaries.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 unparse_questions({questions, Questions, Rest}) ->
   RawQuestions = unparse_questions(Questions),
   <<RawQuestions/binary, Rest/binary>>;
@@ -120,7 +120,7 @@ unparse_questions(RawQuestions, [#question{qname=QName, qtype=QType, qclass=QCla
 
 %% @doc Parse the resource records.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 parse_resource_records(Count, Body) ->
   %%io:fwrite("~w:parse_resource_records(~w, ~w)~n", [?MODULE, Count, Body]),
   parse_resource_records(Count, Body, []).
@@ -145,7 +145,7 @@ parse_resource_records(Count, Body, RRs) ->
 
 %% @doc Unparse resource records.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 unparse_resource_record({resource_records, RRs, Rest}) ->
   RawRRs = unparse_resource_record(RRs),
   <<RawRRs/binary, Rest/binary>>;
@@ -168,7 +168,7 @@ unparse_resource_record(RawRRs, [#resource_record{name=Name, type=Type, class=Cl
 
 %% @doc Parse RDATA, the data of a resource record.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 parse_rdata(a,     _RawRData) -> unspecified;
 parse_rdata(ns,    _RawRData) -> unspecified;
 parse_rdata(md,    _RawRData) -> unspecified;
@@ -191,7 +191,7 @@ parse_rdata(_Type, _RawRData) ->
 
 %% @doc Unparse RDATA, the data of a resource record.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 unparse_rdata(a,     _RawRData) -> <<>>;
 unparse_rdata(ns,    _RawRData) -> <<>>;
 unparse_rdata(md,    _RawRData) -> <<>>;
@@ -214,7 +214,7 @@ unparse_rdata(_Type, _RawRData) ->
 
 %% @doc Parse a DNS domain.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 parse_domain(Body) -> parse_domain([], Body).
 parse_domain(Labels, <<Length:8, Label:Length/binary-unit:8, Rest/binary>>) when Length > 0 ->
   parse_domain([binary_to_list(Label)|Labels], Rest);
@@ -225,7 +225,7 @@ parse_domain(_Labels, _Body) ->
 
 %% @doc Unparse a DNS domain.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 unparse_domain({domain, Domain, Rest}) ->
   {raw_domain, RawDomain} = unparse_domain(Domain),
   {raw_domain, <<RawDomain/binary, Rest/binary>>};
@@ -239,7 +239,7 @@ unparse_domain(RawDomain, [Label|Labels]) ->
 
 %% @doc Turn a numeric DNS type into an atom.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 parse_type(1) -> {type, a};
 parse_type(2) -> {type, ns};
 parse_type(3) -> {type, md};
@@ -261,7 +261,7 @@ parse_type(RawType) ->
 
 %% @doc Unparse a DNS type.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 unparse_type(a) ->     {raw_type, << 1:16>>};
 unparse_type(ns) ->    {raw_type, << 2:16>>};
 unparse_type(md) ->    {raw_type, << 3:16>>};
@@ -283,7 +283,7 @@ unparse_type(Type) ->
 
 %% @doc Turn a numeric DNS qtype into an atom.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 parse_qtype(252) -> {qtype, axfr};
 parse_qtype(253) -> {qtype, mailb};
 parse_qtype(254) -> {qtype, maila};
@@ -296,7 +296,7 @@ parse_qtype(RawQType) ->
 
 %% @doc Unparse a DNS qtype.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 unparse_qtype(axfr) ->  {raw_qtype, <<252:16>>};
 unparse_qtype(mailb) -> {raw_qtype, <<253:16>>};
 unparse_qtype(maila) -> {raw_qtype, <<254:16>>};
@@ -308,7 +308,7 @@ unparse_qtype(all) ->   {raw_qtype, <<255:16>>}. %;
 
 %% @doc Turn a numeric DNS class into an atom.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 parse_class(1) -> in;
 parse_class(2) -> cs;
 parse_class(3) -> ch;
@@ -316,7 +316,7 @@ parse_class(4) -> hs.
 
 %% @doc Unparse a DNS class.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 unparse_class(in) -> <<1:16>>;
 unparse_class(cs) -> <<2:16>>;
 unparse_class(ch) -> <<3:16>>;
@@ -324,38 +324,38 @@ unparse_class(hs) -> <<4:16>>.
 
 %% @doc Turn a numeric DNS qclass into an atom.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 parse_qclass(255) -> any;
 parse_qclass(Class) -> parse_class(Class).
 
 %% @doc Unparse a DNS qclass.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 unparse_qclass(any) -> <<255:16>>;
 unparse_qclass(Class) -> unparse_class(Class).
 
 %% @doc Turn a numeric DNS QR into an atom.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 qr_to_atom(0) -> query_;
 qr_to_atom(1) -> response.
 
 %% @doc Turn a numeric DNS Opcode into an atom.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 opcode_to_atom(0) -> query_;
 opcode_to_atom(1) -> iquery;
 opcode_to_atom(2) -> status.
 
 %% @doc Turn a numeric boolean where 0 is false and 1 is true into an atom.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 bool_to_atom(0) -> false;
 bool_to_atom(1) -> true.
 
 %% @doc Turn a numeric DNS RCODE into an atom.
 %% @private Internal helper function.
-%% @since 0.2
+%% @since 0.2.0
 rcode_to_atom(0) -> no_error;
 rcode_to_atom(1) -> format_error;
 rcode_to_atom(2) -> server_failure;
@@ -431,7 +431,7 @@ rcode_to_atom(5) -> refused.
 %% 		 {correct, refused,         <<5:4>>}]).
 
 %% %% @doc Generates and run all tests.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% test(Factor, Sample) ->
 %%   Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
 %%   DomainParsingTests = domain_parsing_tests(Domains),
@@ -461,7 +461,7 @@ rcode_to_atom(5) -> refused.
 
 %% %% @doc Using lables Labels, build all possible domains from those of length 1 to length Length. 
 %% %% @private Internal helper function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% build_domains(Labels, Length, Sample) ->
 %%   SampleOfLabels = n_of(Sample, Labels),
 %%   BuildDomains = fun(N, Domains) ->                              % Function to build domains of N length and append it to Domains.
@@ -476,7 +476,7 @@ rcode_to_atom(5) -> refused.
 %% %% @doc Having a set of labels build domains names of N labels.
 %% %% @private Internal helper function.
 %% %% @todo Find a better name for this function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% build_domains_(_Labels, 0, _Sample) -> [];
 %% build_domains_(Labels, 1, Sample) -> n_of(Sample, Labels);
 %% build_domains_(Labels, Length, Sample) ->
@@ -488,7 +488,7 @@ rcode_to_atom(5) -> refused.
 
 %% %% @doc Having one label combine it with each domain of a list.
 %% %% @private Internal helper function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% one_domain_per_domain({Type, Parsed, Raw}, Domains) ->
 %%   Comb = fun({Type2, Parsed2, Raw2}) ->  % Function to combine two domains.
 %% 	     if (Type == correct) and (Type2 == correct) ->
@@ -502,7 +502,7 @@ rcode_to_atom(5) -> refused.
 %% %% @doc Having a list of Domains build all the parsing tests to be used by EUnit.
 %% %% @private Internal helper function.
 %% %% @todo tail-optimize.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% domain_parsing_tests([]) -> [];
 %% domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
 %%   Noise = list_to_binary(noise()),
@@ -525,7 +525,7 @@ rcode_to_atom(5) -> refused.
 %% %% @doc Having a list of Domains build all the unparsing tests to be used by EUnit.
 %% %% @private Internal helper function.
 %% %% @todo tail-optimize.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% domain_unparsing_tests([]) -> [];
 %% domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
 %%   Noise = list_to_binary(noise()),
@@ -549,7 +549,7 @@ rcode_to_atom(5) -> refused.
 
 %% %% @doc Using domains Domains, QTypes and QClasses build all possible questions up to length Length (that is, chained questions). 
 %% %% @private Internal helper function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% build_questions(Domains, QTypes, QClasses, Length, Sample) ->
 %%   Questions = n_of(Sample, build_questions(Domains, QTypes, QClasses, Sample)),
 %%   BuildQuestions = fun(N, NewQuestions) ->                           % Function to build questions of N length and append it to NewQuestions.
@@ -559,7 +559,7 @@ rcode_to_atom(5) -> refused.
 
 %% %% @doc Make all the possible combinations for a set of Domains, QTypes and QClasses. 
 %% %% @private Internal helper function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% build_questions([], _QTypes, _QClasses, _Sample) -> [];
 %% build_questions(_Domains, [], _QClasses, _Sample) -> [];
 %% build_questions(_Domains, _QTypes, [], _Sample) -> [];
@@ -590,7 +590,7 @@ rcode_to_atom(5) -> refused.
 
 %% %% @doc Combine each question in Question with every other item in Questions up to N. 
 %% %% @private Internal helper function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% build_questions(_Questions, 0, _Sample) -> [];
 %% build_questions(Questions, 1, Sample) -> n_of(Sample, Questions);
 %% build_questions(Questions, N, Sample) ->
@@ -601,7 +601,7 @@ rcode_to_atom(5) -> refused.
 
 %% %% @doc Combine one question with every other list of questions (in Questions).
 %% %% @private Internal helper function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
 %%   Comb = fun({Type2, Count2, Parsed2, Raw2}) ->
 %% 	     NewType = if (Type == correct) and (Type2 == correct) -> correct;
@@ -617,7 +617,7 @@ rcode_to_atom(5) -> refused.
 %% %% @doc Having a list of Questions build the parsing tests.
 %% %% @private Internal helper function.
 %% %% @todo tail-optimize.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% questions_parsing_tests([]) -> [];
 %% questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
 %%   Noise = list_to_binary(noise()),
@@ -638,7 +638,7 @@ rcode_to_atom(5) -> refused.
 %% %% @doc Having a list of Questions build the unparsing tests.
 %% %% @private Internal helper function.
 %% %% @todo tail-optimize.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% questions_unparsing_tests([]) -> [];
 %% questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
 %%   Noise = list_to_binary(noise()),
@@ -661,7 +661,7 @@ rcode_to_atom(5) -> refused.
 
 %% %% @doc . 
 %% %% @private Internal helper function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% %%build_resource_records(_Domains, _Types, _Classes, _Length) ->
 %%   %%  RDATA = [{cname, Domains},
 %%   %% 	   {hinfo, []},    % Where do we get random hinfos ?
@@ -679,7 +679,7 @@ rcode_to_atom(5) -> refused.
 
 %% %% @doc . 
 %% %% @private Internal helper function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% %%build_messages(_Questions, _RRs) ->
 %% %%  [].
 
@@ -784,14 +784,14 @@ rcode_to_atom(5) -> refused.
 
 %% %% @doc Return one random item out of a list.
 %% %% @private Internal helper function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% one_of(L) ->
 %%   lists:nth(random:uniform(length(L)), L).
 
 %% %% @doc Return N random items out of a list.
 %% %% @private Internal helper function.
 %% %% @todo tail-optimize.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% n_of(N, L) ->
 %%   if length(L) < N -> L;
 %%      true -> n_of(N, L, [])
@@ -806,7 +806,7 @@ rcode_to_atom(5) -> refused.
 %% %% @doc Generate some noise, that is a list of random length (less than 15) with random data.
 %% %%      The porpuse is to insert data in places where the system should not look at.
 %% %% @private Internal helper function.
-%% %% @since 0.2
+%% %% @since 0.2.0
 %% noise() ->
 %%   {I1,I2,I3} = erlang:now(),
 %%   random:seed(I1,I2,I3),
