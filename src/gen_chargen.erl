@@ -47,7 +47,7 @@ behaviour_info(_) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start(Module, Args, Options) ->
-    %io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
+    %%io:fwrite("~w:start(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named chargen server.
@@ -64,7 +64,7 @@ start(Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start(SupName, Module, Args, Options) ->
-    %io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
+    %%io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Start an unnamed chargen server and link to it.
@@ -80,7 +80,7 @@ start(SupName, Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start_link(Module, Args, Options) ->
-    %io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
+    %%io:fwrite("~w:start_link(~w, ~w, ~w)~n", [?MODULE, Module, Args, Options]),
     gen_server:start_link(?MODULE, {Module, Args}, Options).
 
 %% @doc Start a named chargen server and link to it.
@@ -97,7 +97,7 @@ start_link(Module, Args, Options) ->
 %%       SOpts = [term()] 
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Error}
 start_link(SupName, Module, Args, Options) ->
-    %io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
+    %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Args, Options]),
     gen_server:start_link(SupName, ?MODULE, {Module, Args}, Options).
 
 %% @doc Stop a named process.
@@ -109,14 +109,14 @@ start_link(SupName, Module, Args, Options) ->
 %% @spec (Name) -> ok
 %%   Name = atom() | {local, atom()} | {global, atom()}
 stop(Process) ->
-    %io:fwrite("~w:stop(~w)~n", [?MODULE, Process]),
+    %%io:fwrite("~w:stop(~w)~n", [?MODULE, Process]),
     gen_server:cast(Process, stop).
 
 %% @doc This function gets called by gen_server to initialize the module. After some basic internal initialization the init function of the module implementing the particular chargen server gets called (same as this module implementing a particular gen_server).
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 init({Module, Args}) ->
-    %io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
+    %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, Args}]),
     process_flag(trap_exit, true),
     {ok, ModState} = Module:init(Args),
     {ok, {Module, ModState}}.
@@ -125,42 +125,42 @@ init({Module, Args}) ->
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 handle_call(_Request, _From, State) ->
-    %io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
+    %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc Function only used to stop the server.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 handle_cast(stop, State) ->
-    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
 handle_cast(_Request, State) ->
-    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
 %% @doc This function is called by gen_server and is used to handle the UDP and TCP cases by calling chargen/2.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 handle_info({connected, Socket}, {Module, ModState}) ->
-    %io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, {started, Socket}, {Module, ModState}]),
     NewModState = send_data(tcp, Socket, Module, ModState),
     {stop, normal, {Module, NewModState}};
 handle_info({udp, Socket, IP, InPortNo, _Packet}, {Module, ModState}) -> % Handle UDP packages.
-    %io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
+    %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, {udp, Socket, IP, InPortNo, _Packet} , {Module, ModState}]),
     {I1,I2,I3} = erlang:now(),
     random:seed(I1,I2,I3),
     DatagramLength = random:uniform(513) - 1,
     NewModState = send_data(udp, Socket, IP, InPortNo, DatagramLength, Module, ModState),
     {stop, normal, {Module, NewModState}};
 handle_info(_Info, State) ->
-    %io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
+    %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
     
 %% @doc This function get's called by the underling gen_server and we just pass it over to the module implementing a chargen server.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 terminate(Reason, {Module, ModState}) ->
-    %io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
+    %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, Reason, {Module, ModState}]),
     ok = Module:terminate(Reason, ModState),
     ok.
 
@@ -168,14 +168,14 @@ terminate(Reason, {Module, ModState}) ->
 %% @private I think no one is interested in this function, yet.
 %% @since 0.1.0
 code_change(_OldVsn, State, _Extra) ->
-    %io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
+    %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
 
 %% @doc Send data repetitively in the TCP case.
 %% @private Internal helper function.
 %% @since 0.1.0
 send_data(tcp, Socket, Module, ModState) ->
-    %io:fwrite("~w:send_data(tcp, ~w, ~w, ~w)~n", [?MODULE, Socket, Module, ModState]),
+    %%io:fwrite("~w:send_data(tcp, ~w, ~w, ~w)~n", [?MODULE, Socket, Module, ModState]),
     {Reply, NewModState} = Module:chargen(ModState),
     Ok = gen_tcp:send(Socket, Reply),
     case Ok of
@@ -185,17 +185,17 @@ send_data(tcp, Socket, Module, ModState) ->
             NewModState
     end.
 send_data(udp, _Socket, _IP, _InPortNo, 0, _Module, ModState) ->
-    %io:fwrite("~w:send_data(udp, ~w, ~w, ~w, 0, ~w, ~w)~n", [?MODULE, _Socket, _IP, _InPortNo, _Module, ModState]),
+    %%io:fwrite("~w:send_data(udp, ~w, ~w, ~w, 0, ~w, ~w)~n", [?MODULE, _Socket, _IP, _InPortNo, _Module, ModState]),
     ModState;
 send_data(udp, Socket, IP, InPortNo, DatagramLength, Module, ModState) ->
-    %io:fwrite("~w:send_data(udp, ~w, ~w, ~w, ~w, ~w, ~w)~n", [?MODULE, Socket, IP, InPortNo, DatagramLength, Module, ModState]),
+    %%io:fwrite("~w:send_data(udp, ~w, ~w, ~w, ~w, ~w, ~w)~n", [?MODULE, Socket, IP, InPortNo, DatagramLength, Module, ModState]),
     {Reply, NewModState} = Module:chargen(ModState),    % Generate the reply.
-    gen_udp:send(Socket, IP, InPortNo, 
+    gen_udp:send(Socket, IP, InPortNo,
 		 lists:sublist(Reply, DatagramLength)), % Send it.
     if DatagramLength > length(Reply) ->                % We should continue sending data.
             send_data(udp, Socket, IP, InPortNo,        % Send it.
-                      DatagramLength - length(Reply), 
+                      DatagramLength - length(Reply),
                       Module, NewModState);
-       DatagramLength =< length(Reply) -> % We are done.
+       DatagramLength =< length(Reply) ->               % We are done.
             NewModState
     end.

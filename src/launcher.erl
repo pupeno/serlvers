@@ -38,7 +38,7 @@
 %% @spec (Module::atom(), Transport::transport(), Ip::ip_address(), Port::integer()) -> Result
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start(Module, Transport, Ip, Port) ->
-    io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, Module, Transport, Ip, Port]),
+    %%io:fwrite("~w:start(~w, ~w, ~w, ~w)~n", [?MODULE, Module, Transport, Ip, Port]),
     gen_server:start(?MODULE, {Module, Transport, Ip, Port}, []).
 
 %% @doc Launch a named serlver.
@@ -50,7 +50,7 @@ start(Module, Transport, Ip, Port) ->
 %%   Name = {local, atom()} | {global, atom()}
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start(SupName, Module, Transport, Ip, Port) ->
-    io:fwrite("~w:start(~w, ~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Ip, Port]),
+    %%io:fwrite("~w:start(~w, ~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Ip, Port]),
     gen_server:start(SupName, ?MODULE, {Module, Transport, Ip, Port}, []).
 
 %% @doc Launch an unamed serlver and link to it.
@@ -61,7 +61,7 @@ start(SupName, Module, Transport, Ip, Port) ->
 %% @spec (Module::atom(), Transport::transport(), Ip::ip_address(), Port::integer()) -> Result
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start_link(Module, Transport, Ip, Port) ->
-    io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, Module, Transport, Ip, Port]),
+    %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w)~n", [?MODULE, Module, Transport, Ip, Port]),
     gen_server:start_link(?MODULE, {Module, Transport, Ip, Port}, []).
 
 %% @doc Launch a named serlver and link to it.
@@ -75,7 +75,7 @@ start_link(Module, Transport, Ip, Port) ->
 %%   Name = {local, atom()} | {global, atom()}
 %%   Result = {ok, Pid} | {error, {already_started, Pid}} | {error, Reason}
 start_link(SupName, Module, Transport, Ip, Port) ->
-    io:fwrite("~w:start_link(~w, ~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Ip, Port]),
+    %%io:fwrite("~w:start_link(~w, ~w, ~w, ~w, ~w)~n", [?MODULE, SupName, Module, Transport, Ip, Port]),
     gen_server:start_link(SupName, ?MODULE, {Module, Transport, Ip, Port}, []).
 
 %% @doc Stops a running process identified by Name.
@@ -88,10 +88,10 @@ start_link(SupName, Module, Transport, Ip, Port) ->
 %% @spec (Name) -> ok
 %%   Name = atom() | {local, atom()} | {global, atom()}
 stop({_Scope, Name}) ->
-    io:fwrite("~w:stop(~w)~n", [?MODULE, {_Scope, Name}]),
+    %%io:fwrite("~w:stop(~w)~n", [?MODULE, {_Scope, Name}]),
     gen_server:cast(Name, stop);
 stop(Name) ->
-    io:fwrite("~w:stop(~w)~n", [?MODULE, Name]),
+    %%io:fwrite("~w:stop(~w)~n", [?MODULE, Name]),
     gen_server:cast(Name, stop).
 
 %% @doc The follwing function is in charge of accepting new TCP connections.
@@ -99,27 +99,27 @@ stop(Name) ->
 %% @private Only called from {@link init}.
 %% @since 0.1.0
 acceptor(tcp, Module, LSocket) ->
-    io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, tcp, Module, LSocket]),
+    %%io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, tcp, Module, LSocket]),
     case gen_tcp:accept(LSocket) of                        % Wait for an incomming connection.
-		  {ok, Socket} ->
-				{ok, Pid} = Module:start(),                    % Run a worker.
-				ok = gen_tcp:controlling_process(Socket, Pid), % Let the worker control this connection.
-				Pid ! {connected, Socket},                     % Worker, wake up, you have to work (this is for the cases where upon connection, the worker has to do something, like daytime and time, unlike echo).
-				ok = inet:setopts(LSocket, [{active, once}]),  % Enable accepting one connection.
-				acceptor(tcp, Module, LSocket);                % Wait for the next connection.
-		  {error, Reason} ->
-				{error, Reason}
+        {ok, Socket} ->
+            {ok, Pid} = Module:start(),                    % Run a worker.
+            ok = gen_tcp:controlling_process(Socket, Pid), % Let the worker control this connection.
+            Pid ! {connected, Socket},                     % Worker, wake up, you have to work (this is for the cases where upon connection, the worker has to do something, like daytime and time, unlike echo).
+            ok = inet:setopts(LSocket, [{active, once}]),  % Enable accepting one connection.
+            acceptor(tcp, Module, LSocket);                % Wait for the next connection.
+        {error, Reason} ->
+            {error, Reason}
     end;
 acceptor(udp, Module, LSocket) ->
-    io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, udp, Module, LSocket]),
+    %%io:fwrite("~w:acceptor(~w, ~w, ~w)~n", [?MODULE, udp, Module, LSocket]),
     receive                                               % Wait for a message.
-        {udp, LSocket, IP, InPortNo, Packet} ->            % The message is an UDP packet. 
+        {udp, LSocket, IP, InPortNo, Packet} ->           % The message is an UDP packet.
             {ok, Pid} = Module:start(),                   % Start the worker to do something with it.
-            Pid ! {udp, LSocket, IP, InPortNo, Packet},    % Send the packet to the worker.
-				ok = inet:setopts(LSocket, [{active, once}]), % Enable accepting one packet.
+            Pid ! {udp, LSocket, IP, InPortNo, Packet},   % Send the packet to the worker.
+            ok = inet:setopts(LSocket, [{active, once}]), % Enable accepting one packet.
             acceptor(udp, Module, LSocket);               % Wait for the next packet.
         Other ->
-				error_logger:error_msg("Error: Process ~w got unknown msg ~w~n.", [self(), Other]),
+            error_logger:error_msg("Error: Process ~w got unknown msg ~w~n.", [self(), Other]),
             acceptor(udp, Module, LSocket)   % TODO: do some logging ? we received an unexpectde message.
     end.
 
@@ -127,13 +127,13 @@ acceptor(udp, Module, LSocket) ->
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 init({Module, tcp, Ip, Port}) ->
-    io:fwrite("~w:init(~w)~n", [?MODULE, {Module, tcp, Ip, Port}]),
+    %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, tcp, Ip, Port}]),
     process_flag(trap_exit, true),
     {ok, LSocket} = listen(tcp, Ip, Port),                  % Bind the tcp port,
     spawn_link(?MODULE, acceptor, [tcp, Module, LSocket]),  % and launch the acceptor.
     {ok, {Module, tcp, LSocket}};                           % We are done.
 init({Module, udp, Ip, Port}) ->
-    io:fwrite("~w:init(~w)~n", [?MODULE, {Module, udp, Ip, Port}]),
+    %%io:fwrite("~w:init(~w)~n", [?MODULE, {Module, udp, Ip, Port}]),
     process_flag(trap_exit, true),
     {ok, LSocket} = listen(udp, Ip, Port),                       % Bind the udp port,
     Pid = spawn_link(?MODULE, acceptor, [udp, Module, LSocket]), % run the acceptor
@@ -144,35 +144,35 @@ init({Module, udp, Ip, Port}) ->
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 handle_call(_Request, _From, State) ->
-    io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
+    %%io:fwrite("~w:handle_call(~w, ~w, ~w)~n", [?MODULE, _Request, _From, State]),
     {noreply, State}.
 
 %% @doc The only cast to answer is to stop.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 handle_cast(stop, State) ->
-    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, stop, State]),
     {stop, normal, State};
 handle_cast(_Request, State) ->
-    io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
+    %%io:fwrite("~w:handle_cast(~w, ~w)~n", [?MODULE, _Request, State]),
     {noreply, State}.
 
 %% @doc No other signals to answer.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 handle_info(_Info, State) ->
-    io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
+    %%io:fwrite("~w:handle_info(~w, ~w)~n", [?MODULE, _Info, State]),
     {noreply, State}.
 
 %% @doc On termination, close the sockets.
 %% @private Only gen_server should call this function.
 %% @since 0.1.0
 terminate(_Reason, {_Module, tcp, LSocket}) ->
-    io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, tcp, LSocket}]),
+    %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, tcp, LSocket}]),
     ok = gen_tcp:close(LSocket), % Close the socket, we are done.
     ok;
 terminate(_Reason, {_Module, udp, LSocket}) ->
-    io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, udp, LSocket}]),
+    %%io:fwrite("~w:terminate(~w, ~w)~n", [?MODULE, _Reason, {_Module, udp, LSocket}]),
     ok = gen_udp:close(LSocket), % Close the socket, we are done
     ok.
 
@@ -180,26 +180,26 @@ terminate(_Reason, {_Module, udp, LSocket}) ->
 %% @private I think no one is interested in this function, yet.
 %% @since 0.1.0
 code_change(_OldVsn, State, _Extra) ->
-    io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
+    %%io:fwrite("~w:code_change(~w, ~w, ~w)~n", [?MODULE, _OldVsn, State, _Extra]),
     {ok, State}.
 
 %% @doc Bind an udp or tcp port and be smart about handling the Ip.
 %% @private Internal helper function.
 %% @since 0.2.0
 listen(Transport, Ip, Port) ->
-    Bind = case Transport of 
-                     tcp -> fun gen_tcp:listen/2;
-                     udp -> fun gen_udp:open/2
-                 end,                   
-    if Ip == all ->                                % Bind all the ip addresses.
+    Bind = case Transport of
+               tcp -> fun gen_tcp:listen/2;
+               udp -> fun gen_udp:open/2
+           end,
+    if Ip == all ->
             %% TODO: if the system doesn't support IPv6, this is likely to give an error, then we should run re-run this on IPv4 (only), that is, with inet.
-            Bind(Port, [{active, once}, inet6]);
+            Bind(Port, [{active, once}, inet6]);                   % Bind all the ip addresses.
        true ->
             IpLength = length(tuple_to_list(Ip)),
-            if IpLength == 8 ->                    % Bind an IPv6 address.
-                    Bind(Port, [{active, once}, {ip, Ip}, inet6]);
-               IpLength == 4 ->                    % Bind an IPv4 address.
-                    Bind(Port, [{active, once}, {ip, Ip}, inet]);
+            if IpLength == 8 ->
+                    Bind(Port, [{active, once}, {ip, Ip}, inet6]); % Bind an IPv6 address.
+               IpLength == 4 ->
+                    Bind(Port, [{active, once}, {ip, Ip}, inet]);  % Bind an IPv4 address.
                true ->
                     {error, einval}
             end
