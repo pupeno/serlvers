@@ -368,6 +368,8 @@ rcode_to_atom(5) -> refused.
 %% %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+-ifdef(TEST).
+
 %% %%% Testing data
 
 %% %% Some labels (atoms of domain names) to test the parser.
@@ -816,3 +818,5 @@ rcode_to_atom(5) -> refused.
 %% noise(Max) ->
 %%   [random:uniform(256) - 1 | 
 %%    noise(Max - 1)].
+
+-endif. %% ifdef(TEST).
