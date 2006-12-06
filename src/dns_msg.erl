@@ -370,67 +370,67 @@ rcode_to_atom(5) -> refused.
 
 -ifdef(TEST).
 
-%% %%% Testing data
+%%% Testing data
 
-%% %% Some labels (atoms of domain names) to test the parser.
-%% -define(LABELS, [{correct, ["com"], <<3, "com">>},
-%%  		 {correct, ["s"], <<1, "s">>},
-%% 		 {correct,["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"], <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
-%% 		 {error, ["mail"], <<5, "mail">>}]).
+%% Some labels (atoms of domain names) to test the parser.
+-define(LABELS, [{correct, ["com"], <<3, "com">>},
+  		 {correct, ["s"], <<1, "s">>},
+ 		 {correct, ["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"], <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
+ 		 {error, ["mail"], <<5, "mail">>}]).
 
-%% %% DNS Types to test the parser.
-%% -define(TYPES, [{correct, a,     << 1:16>>},
-%% 		{correct, ns,    << 2:16>>},
-%% 		{correct, md,    << 3:16>>},
-%% 		{correct, mf,    << 4:16>>},
-%% 		{correct, cname, << 5:16>>},
-%% 		{correct, soa,   << 6:16>>},
-%% 		{correct, mb,    << 7:16>>},
-%% 		{correct, mg,    << 8:16>>},
-%% 		{correct, mr,    << 9:16>>},
-%% 		{correct, null,  <<10:16>>},
-%% 		{correct, wks,   <<11:16>>},
-%% 		{correct, ptr,   <<12:16>>},
-%% 		{correct, hinfo, <<13:16>>},
-%% 		{correct, minfo, <<14:16>>},
-%% 		{correct, mx,    <<15:16>>},
-%%  		{correct, txt,   <<16:16>>}]).
+%% DNS Types to test the parser.
+-define(TYPES, [{correct, a,     << 1:16>>},
+ 		{correct, ns,    << 2:16>>},
+ 		{correct, md,    << 3:16>>},
+ 		{correct, mf,    << 4:16>>},
+ 		{correct, cname, << 5:16>>},
+ 		{correct, soa,   << 6:16>>},
+ 		{correct, mb,    << 7:16>>},
+ 		{correct, mg,    << 8:16>>},
+ 		{correct, mr,    << 9:16>>},
+ 		{correct, null,  <<10:16>>},
+ 		{correct, wks,   <<11:16>>},
+ 		{correct, ptr,   <<12:16>>},
+ 		{correct, hinfo, <<13:16>>},
+ 		{correct, minfo, <<14:16>>},
+ 		{correct, mx,    <<15:16>>},
+  		{correct, txt,   <<16:16>>}]).
 
-%% %% DNS QTypes to test the parser.
-%% -define(QTYPES, [{correct, axfr,  <<252:16>>},
-%% 		 {correct, mailb, <<253:16>>},
-%% 		 {correct, maila, <<254:16>>},
-%%  		 {correct, all,   <<255:16>>}] ++ ?TYPES).
+%% DNS QTypes to test the parser.
+-define(QTYPES, [{correct, axfr,  <<252:16>>},
+ 		 {correct, mailb, <<253:16>>},
+ 		 {correct, maila, <<254:16>>},
+  		 {correct, all,   <<255:16>>}] ++ ?TYPES).
 
-%% %% DNS Classes to test the parser.
-%% -define(CLASSES, [{correct, in, <<1:16>>},
-%% 		  {correct, cs, <<2:16>>},
-%% 		  {correct, ch, <<3:16>>},
-%%  		  {correct, hs, <<4:16>>}]).
+%% DNS Classes to test the parser.
+-define(CLASSES, [{correct, in, <<1:16>>},
+ 		  {correct, cs, <<2:16>>},
+ 		  {correct, ch, <<3:16>>},
+  		  {correct, hs, <<4:16>>}]).
 
-%% %% DNS QClasses to test the parser.
-%% -define(QCLASSES, [{correct, any, <<255:16>>}] ++ ?CLASSES).
+%% DNS QClasses to test the parser.
+-define(QCLASSES, [{correct, any, <<255:16>>}] ++ ?CLASSES).
 
-%% %% DNS QRs to test the parser.
-%% -define(QRS, [{correct, query_,   <<0:1>>},
-%% 	      {correct, response, <<1:1>>}]).
+%% DNS QRs to test the parser.
+-define(QRS, [{correct, query_,   <<0:1>>},
+ 	      {correct, response, <<1:1>>}]).
 
-%% %% DNS Opcodes to test the parser.
-%% -define(OPCODES, [{correct, query_, <<0:4>>},
-%% 		  {correct, iquery, <<1:4>>},
-%% 		  {correct, status, <<2:4>>}]).
+%% DNS Opcodes to test the parser.
+-define(OPCODES, [{correct, query_, <<0:4>>},
+ 		  {correct, iquery, <<1:4>>},
+ 		  {correct, status, <<2:4>>}]).
 
-%% %% DNS Booleans to test the parser.
-%% -define(BOOLEANS, [{correct, false, <<0:1>>},
-%% 		   {correct, true,  <<1:1>>}]).
+%% DNS Booleans to test the parser.
+-define(BOOLEANS, [{correct, false, <<0:1>>},
+ 		   {correct, true,  <<1:1>>}]).
 
-%% %% DNS RCodes to test the parser.
-%% -define(RCODES, [{correct, no_error,        <<0:4>>},
-%% 		 {correct, format_error,    <<1:4>>},
-%% 		 {correct, server_failure,  <<2:4>>},
-%% 		 {correct, name_error,      <<3:4>>},
-%% 		 {correct, not_implemented, <<4:4>>},
-%% 		 {correct, refused,         <<5:4>>}]).
+%% DNS RCodes to test the parser.
+-define(RCODES, [{correct, no_error,        <<0:4>>},
+ 		 {correct, format_error,    <<1:4>>},
+ 		 {correct, server_failure,  <<2:4>>},
+ 		 {correct, name_error,      <<3:4>>},
+ 		 {correct, not_implemented, <<4:4>>},
+ 		 {correct, refused,         <<5:4>>}]).
 
 %% %% @doc Generates and run all tests.
 %% %% @since 0.2.0
@@ -458,8 +458,8 @@ rcode_to_atom(5) -> refused.
 %% 	     RRsParsingTests ++ 
 %% 	     MessageParsingTests).
 
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% %%%%%% Domain Parsing and Unparsing testing %%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% Domain Parsing and Unparsing testing %%%%%%
 
 %% %% @doc Using lables Labels, build all possible domains from those of length 1 to length Length. 
 %% %% @private Internal helper function.
@@ -816,7 +816,7 @@ rcode_to_atom(5) -> refused.
 
 %% noise(0) -> [];
 %% noise(Max) ->
-%%   [random:uniform(256) - 1 | 
+%%   [random:uniform(256) - 1 |
 %%    noise(Max - 1)].
 
 -endif. %% ifdef(TEST).
