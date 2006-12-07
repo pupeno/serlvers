@@ -786,36 +786,37 @@ rcode_to_atom(5) -> refused.
 %% %% @doc Return one random item out of a list.
 %% %% @private Internal helper function.
 %% %% @since 0.2.0
-%% one_of(L) ->
-%%   lists:nth(random:uniform(length(L)), L).
+one_of(L) ->
+    lists:nth(random:uniform(length(L)), L).
 
-%% %% @doc Return N random items out of a list.
-%% %% @private Internal helper function.
-%% %% @todo tail-optimize.
-%% %% @since 0.2.0
-%% n_of(N, L) ->
-%%   if length(L) < N -> L;
-%%      true -> n_of(N, L, [])
-%%   end.
-%% n_of(0, _L, NL) ->
-%%   NL;
-%% n_of(N, L, NL) ->
-%%   if length(L) =< N -> L;
-%%      true -> n_of(N - 1, L, [one_of(L)|NL])
-%%   end.
+%% @doc Return N random items out of a list.
+%% @private Internal helper function.
+%% @todo tail-optimize.
+%% @since 0.2.0
+n_of(all, L) -> L;
+n_of(N, L) ->
+    if length(L) < N -> L;
+       true -> n_of(N, L, [])
+    end.
+n_of(0, _L, NL) ->
+    NL;
+n_of(N, L, NL) ->
+    if length(L) =< N -> L;
+       true -> n_of(N - 1, L, [one_of(L)|NL])
+    end.
 
-%% %% @doc Generate some noise, that is a list of random length (less than 15) with random data.
-%% %%      The porpuse is to insert data in places where the system should not look at.
-%% %% @private Internal helper function.
-%% %% @since 0.2.0
-%% noise() ->
-%%   {I1,I2,I3} = erlang:now(),
-%%   random:seed(I1,I2,I3),
-%%   noise(random:uniform(15) - 1).
+%% @doc Generate some noise, that is a list of random length (less than 15) with random data.
+%%      The porpuse is to insert data in places where the system should not look at.
+%% @private Internal helper function.
+%% @since 0.2.0
+noise() ->
+    {I1,I2,I3} = erlang:now(),
+    random:seed(I1,I2,I3),
+    noise(random:uniform(15) - 1).
 
-%% noise(0) -> [];
-%% noise(Max) ->
-%%   [random:uniform(256) - 1 |
-%%    noise(Max - 1)].
+noise(0) -> [];
+noise(Max) ->
+    [random:uniform(256) - 1 |
+     noise(Max - 1)].
 
 -endif. %% ifdef(TEST).
