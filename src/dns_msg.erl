@@ -438,7 +438,7 @@ all_test_() ->
     Sample = 25,
     Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
     DomainParsingTests = domain_parsing_tests(Domains),
-%%    DomainUnparsingTests = domain_unparsing_tests(Domains),
+    DomainUnparsingTests = domain_unparsing_tests(Domains),
 
 %%    Questions = build_questions(Domains, ?QTYPES, ?QCLASSES, Factor, Sample),
 %%    QuestionsParsingTests = questions_parsing_tests(Questions),
@@ -457,7 +457,7 @@ all_test_() ->
 %%               QuestionsParsingTests ++ QuestionsUnparsingTests ++
 %%               RRsParsingTests ++
 %%               MessageParsingTests).
-    DomainParsingTests.
+    DomainParsingTests ++ DomainUnparsingTests.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Domain Parsing and Unparsing testing %%%%%%
@@ -484,6 +484,28 @@ domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
             [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
                              (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
              domain_parsing_tests(Domains)]
+    end.
+
+%% @doc Having a list of Domains build all the unparsing tests to be used by EUnit.
+%% @private Internal helper function.
+%% @todo tail-optimize.
+%% @since 0.2.0
+domain_unparsing_tests([]) -> [];
+domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
+    Noise = list_to_binary(noise()),
+    CRaw = <<Raw/binary, Noise/binary>>,         % Complete raw, add noise
+    CParsed = {domain, Parsed, Noise},           % Complete parsed, add signature and noise.
+    {raw_domain, RawToTest} = (catch unparse_domain(CParsed)), % Perform the unparsing.
+    Desc = lists:flatten(                        % Some useful description
+             io_lib:format("~w, ~w, ~w, ~w", [Type, CParsed, CRaw, RawToTest])),
+
+    case Type of % What kind of test is it ?
+        correct ->
+            [{Desc, ?_assert(RawToTest == CRaw)} | domain_unparsing_tests(Domains)];
+        error   ->
+            [{Desc, ?_assert((RawToTest == {error, invalid}) or % We should get an error
+                             (RawToTest /= CRaw))} |            % or plain wrong data (not an exception).
+             domain_unparsing_tests(Domains)]
     end.
 
 %% @doc Using lables Labels, build all possible domains from those of length 1 to length Length.
@@ -525,28 +547,6 @@ one_domain_per_domain({Type, Parsed, Raw}, Domains) ->
                    end
            end,
     lists:map(Comb, Domains).
-
-%% %% @doc Having a list of Domains build all the unparsing tests to be used by EUnit.
-%% %% @private Internal helper function.
-%% %% @todo tail-optimize.
-%% %% @since 0.2.0
-%% domain_unparsing_tests([]) -> [];
-%% domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
-%%   Noise = list_to_binary(noise()),
-%%   CRaw = <<Raw/binary, Noise/binary>>,         % Complete raw, add noise
-%%   CParsed = {domain, Parsed, Noise},           % Complete parsed, add signature and noise.
-%%   {raw_domain, RawToTest} = (catch unparse_domain(CParsed)), % Perform the unparsing.
-%%   Desc = lists:flatten(                        % Some useful description
-%% 	   io_lib:format("~w, ~w, ~w, ~w", [Type, CParsed, CRaw, RawToTest])),
-
-%%   case Type of % What kind of test is it ?
-%%     correct ->
-%%       [{Desc, ?_assert(RawToTest == CRaw)} | domain_unparsing_tests(Domains)];
-%%     error   ->
-%%       [{Desc, ?_assert((RawToTest == {error, invalid}) or % We should get an error
-%% 		       (RawToTest /= CRaw))} |            % or plain wrong data (not an exception).
-%%        domain_unparsing_tests(Domains)]
-%%   end.
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%% Question Parsing and Unparsing testing %%%%%
