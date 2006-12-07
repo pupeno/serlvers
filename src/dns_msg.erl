@@ -429,18 +429,22 @@ parse_bool(1) -> true.
  		   {correct, true,  <<1:1>>}]).
 
 %% DNS RCodes to test the parser.
--define(RCODES, [{correct, no_error,        <<0:4>>},
- 		 {correct, format_error,    <<1:4>>},
- 		 {correct, server_failure,  <<2:4>>},
- 		 {correct, name_error,      <<3:4>>},
- 		 {correct, not_implemented, <<4:4>>},
- 		 {correct, refused,         <<5:4>>}]).
+-define(RCODES, [{correct, no_error,        0},
+ 		 {correct, format_error,    1},
+ 		 {correct, server_failure,  2},
+ 		 {correct, name_error,      3},
+ 		 {correct, not_implemented, 4},
+ 		 {correct, refused,         5},
+                 {error,   whatever,       10}]).
 
 %% @doc Generates and run all tests.
 %% @since 0.2.0
 all_test_() ->
     Factor = 3,
     Sample = 20,
+
+    RCodeParsingTests = rcode_parsing_tests(?RCODES),
+
     Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
     DomainParsingTests = domain_parsing_tests(Domains),
     DomainUnparsingTests = domain_unparsing_tests(Domains),
@@ -462,8 +466,25 @@ all_test_() ->
 %%               QuestionsParsingTests ++ QuestionsUnparsingTests ++
 %%               RRsParsingTests ++
 %%               MessageParsingTests).
-    DomainParsingTests ++ DomainUnparsingTests ++
+    RCodeParsingTests ++
+        DomainParsingTests ++ DomainUnparsingTests ++
         QuestionsParsingTests. %%, QuestionsUnparsingTests.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% RCode Parsing and Unparsing testing %%%%%%
+
+rcode_parsing_tests([]) -> [];
+rcode_parsing_tests([{Type, Parsed, Raw}|RCodes]) ->
+    ParsedToTest = parse_rcode(Raw), % Perform the parsing.
+    Desc = lists:flatten(            % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc,
+      case Type of % What kind of test is it ?
+          correct -> ?_assert(ParsedToTest == Parsed);
+          error   -> ?_assert((ParsedToTest == {error, invalid})) % We should get an error.
+      end} 
+      | rcode_parsing_tests(RCodes)].
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Domain Parsing and Unparsing testing %%%%%%
@@ -485,7 +506,7 @@ domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
         correct ->
             [{Desc, ?_assert(ParsedToTest == CParsed)} |
              domain_parsing_tests(Domains)];
-        error   -> 
+        error   ->
             [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
                              (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
              domain_parsing_tests(Domains)]
