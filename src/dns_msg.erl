@@ -243,15 +243,15 @@ unparse_domain(RawDomain, [Label|Labels]) ->
 %% @doc Turn a numeric DNS type into an atom.
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_type(1) -> {type, a};
-parse_type(2) -> {type, ns};
-parse_type(3) -> {type, md};
-parse_type(4) -> {type, mf};
-parse_type(5) -> {type, cname};
-parse_type(6) -> {type, soa};
-parse_type(7) -> {type, mb};
-parse_type(8) -> {type, mg};
-parse_type(9) -> {type, mr};
+parse_type(1)  -> {type, a};
+parse_type(2)  -> {type, ns};
+parse_type(3)  -> {type, md};
+parse_type(4)  -> {type, mf};
+parse_type(5)  -> {type, cname};
+parse_type(6)  -> {type, soa};
+parse_type(7)  -> {type, mb};
+parse_type(8)  -> {type, mg};
+parse_type(9)  -> {type, mr};
 parse_type(10) -> {type, null};
 parse_type(11) -> {type, wks};
 parse_type(12) -> {type, ptr};
