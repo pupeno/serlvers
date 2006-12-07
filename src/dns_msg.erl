@@ -258,8 +258,7 @@ parse_type(13) -> {type, hinfo};
 parse_type(14) -> {type, minfo};
 parse_type(15) -> {type, mx};
 parse_type(16) -> {type, txt};
-parse_type(RawType) ->
-    {error, invalid_raw_type, RawType}.
+parse_type(_) ->  {error, invalid}.
 
 %% @doc Unparse a DNS type.
 %% @private Internal helper function.
@@ -280,8 +279,7 @@ unparse_type(hinfo) -> {raw_type, <<13:16>>};
 unparse_type(minfo) -> {raw_type, <<14:16>>};
 unparse_type(mx) ->    {raw_type, <<15:16>>};
 unparse_type(txt) ->   {raw_type, <<16:16>>};
-unparse_type(Type) ->
-    {error, invalid_type, Type}.
+unparse_type(_) ->     {error, invalid}.
 
 %% @doc Turn a numeric DNS qtype into an atom.
 %% @private Internal helper function.
@@ -293,7 +291,7 @@ parse_qtype(255) -> {qtype, all};
 parse_qtype(RawQType) ->
     case parse_type(RawQType) of
         {type, QType} -> {qtype, QType};
-        {error, invalid_raw_type, QType} -> {error, invalid_raw_qtype, QType}
+        {error, invalid} -> {error, invalid}
     end.
 
 %% @doc Unparse a DNS qtype.
@@ -302,11 +300,12 @@ parse_qtype(RawQType) ->
 unparse_qtype(axfr) ->  {raw_qtype, <<252:16>>};
 unparse_qtype(mailb) -> {raw_qtype, <<253:16>>};
 unparse_qtype(maila) -> {raw_qtype, <<254:16>>};
-unparse_qtype(all) ->   {raw_qtype, <<255:16>>}. %;
-                                                %unparse_qtype(QType) ->
-                                                %  case unparse_type(QType) of
-                                                %    {raw_type, RawQType} -> {raw_qtype, RawQType}
-                                                %  {raw_qtype, RawType}.
+unparse_qtype(all) ->   {raw_qtype, <<255:16>>};
+unparse_qtype(QType) ->
+    case unparse_type(QType) of
+        {raw_type, RawQType} -> {raw_qtype, RawQType};
+        {error, invalid} -> {error, invalid}
+    end.
 
 %% @doc Turn a numeric DNS class into an atom.
 %% @private Internal helper function.
@@ -314,7 +313,8 @@ unparse_qtype(all) ->   {raw_qtype, <<255:16>>}. %;
 parse_class(1) -> in;
 parse_class(2) -> cs;
 parse_class(3) -> ch;
-parse_class(4) -> hs.
+parse_class(4) -> hs;
+parse_class(_) -> {error, invalid}.
 
 %% @doc Unparse a DNS class.
 %% @private Internal helper function.
@@ -322,7 +322,8 @@ parse_class(4) -> hs.
 unparse_class(in) -> <<1:16>>;
 unparse_class(cs) -> <<2:16>>;
 unparse_class(ch) -> <<3:16>>;
-unparse_class(hs) -> <<4:16>>.
+unparse_class(hs) -> <<4:16>>;
+unparse_class(_)  -> {error, invalid}.
 
 %% @doc Turn a numeric DNS qclass into an atom.
 %% @private Internal helper function.
