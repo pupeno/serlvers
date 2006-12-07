@@ -83,17 +83,21 @@ parse_message(RawMsg) ->
 %% @spec parse_questions(integer(), binary()) -> {questions, Questions, Rest} | {error, invalid}
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_questions(Count, Body) -> parse_questions(Count, Body, []).
+parse_questions(Count, RawBody) -> parse_questions(Count, RawBody, []).
 
 parse_questions(0, Rest, Questions) -> {questions, lists:reverse(Questions), Rest};
-parse_questions(Count, Body, Questions) ->
+parse_questions(Count, RawBody, Questions) ->
     %% To parse a question, first parse the domain. T
-    case parse_domain(Body) of
-        {domain, QNAME, <<QTYPE:16, QCLASS:16, Rest/binary>>} ->
-            parse_questions(Count - 1, Rest,
-                            [#question{qname = QNAME, qtype = parse_qtype(QTYPE),
-                                       qclass = parse_qclass(QCLASS)}|
-                             Questions]);
+    case parse_domain(RawBody) of
+        {domain, QNAME, <<RawQTYPE:16, RawQCLASS:16, Rest/binary>>} ->
+            case parse_qtype(RawQTYPE) of
+                {qtype, QTYPE} ->
+                    parse_questions(Count - 1, Rest,
+                                    [#question{qname = QNAME, qtype = QTYPE, qclass = parse_qclass(RawQCLASS)}|
+                                     Questions]);
+                {error, invalid} ->
+                    {error, invalid}
+            end;
         {error, invalid} ->
             {error, invalid}
     end.
@@ -374,7 +378,7 @@ rcode_to_atom(5) -> refused.
 %% Some labels (atoms of domain names) to test the parser.
 -define(LABELS, [{correct, ["com"], <<3, "com">>},
   		 {correct, ["s"], <<1, "s">>},
- 		 {correct, ["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"], <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
+ 		 %%{correct, ["abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy"], <<63, "abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxy">>},
  		 {error, ["mail"], <<5, "mail">>}]).
 
 %% DNS Types to test the parser.
@@ -435,14 +439,14 @@ rcode_to_atom(5) -> refused.
 %% @since 0.2.0
 all_test_() ->
     Factor = 3,
-    Sample = 25,
+    Sample = 20,
     Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
     DomainParsingTests = domain_parsing_tests(Domains),
     DomainUnparsingTests = domain_unparsing_tests(Domains),
 
-%%    Questions = build_questions(Domains, ?QTYPES, ?QCLASSES, Factor, Sample),
-%%    QuestionsParsingTests = questions_parsing_tests(Questions),
-%%    QuestionsUnparsingTests = questions_unparsing_tests(Questions),
+    Questions = build_questions(Domains, ?QTYPES, ?QCLASSES, Factor, Sample),
+    QuestionsParsingTests = questions_parsing_tests(Questions),
+    %%QuestionsUnparsingTests = questions_unparsing_tests(Questions),
 
     %% TODO: make these tests dynamic as the previous ones.
     %%Types = n_of(Sample, ?TYPES),
@@ -457,11 +461,11 @@ all_test_() ->
 %%               QuestionsParsingTests ++ QuestionsUnparsingTests ++
 %%               RRsParsingTests ++
 %%               MessageParsingTests).
-    DomainParsingTests ++ DomainUnparsingTests.
+    DomainParsingTests ++ DomainUnparsingTests ++
+        QuestionsParsingTests. %%, QuestionsUnparsingTests.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Domain Parsing and Unparsing testing %%%%%%
-
 
 %% @doc Having a list of Domains build all the parsing tests to be used by EUnit.
 %% @private Internal helper function.
@@ -548,117 +552,119 @@ one_domain_per_domain({Type, Parsed, Raw}, Domains) ->
            end,
     lists:map(Comb, Domains).
 
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% %%%%% Question Parsing and Unparsing testing %%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Question Parsing and Unparsing testing %%%%%
 
-%% %% @doc Using domains Domains, QTypes and QClasses build all possible questions up to length Length (that is, chained questions). 
-%% %% @private Internal helper function.
-%% %% @since 0.2.0
-%% build_questions(Domains, QTypes, QClasses, Length, Sample) ->
-%%   Questions = n_of(Sample, build_questions(Domains, QTypes, QClasses, Sample)),
-%%   BuildQuestions = fun(N, NewQuestions) ->                           % Function to build questions of N length and append it to NewQuestions.
-%% 		       NewQuestions ++ build_questions(Questions, N, Sample)
-%% 		   end,
-%%   n_of(Sample, lists:foldl(BuildQuestions, [], lists:seq(1, Length))).
+%% @doc Having a list of Questions build the parsing tests.
+%% @private Internal helper function.
+%% @todo tail-optimize.
+%% @since 0.2.0
+questions_parsing_tests([]) -> [];
+questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
+    Noise = list_to_binary(noise()),
+    CRaw = <<Raw/binary, Noise/binary>>,                 % Complete raw, add noise.
+    CParsed = {questions, Parsed, Noise},                % Complete parsed, add signature and noise.
+    ParsedToTest = (catch parse_questions(Count, CRaw)), % Perform the parsing.
+    Desc = lists:flatten(                                % Some useful description
+             io_lib:format("~p, ~p, ~p, ~p, ~p", [Type, CParsed, Count, CRaw, ParsedToTest])),
+    case Type of   % What kind of test is it ?
+        correct ->
+            [{Desc, ?_assert(ParsedToTest == CParsed)} | questions_parsing_tests(Questions)];
+        error   ->
+            [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
+                             (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
+             questions_parsing_tests(Questions)]
+    end.
 
-%% %% @doc Make all the possible combinations for a set of Domains, QTypes and QClasses. 
-%% %% @private Internal helper function.
-%% %% @since 0.2.0
-%% build_questions([], _QTypes, _QClasses, _Sample) -> [];
-%% build_questions(_Domains, [], _QClasses, _Sample) -> [];
-%% build_questions(_Domains, _QTypes, [], _Sample) -> [];
-%% build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, {QCType, QCParsed, QCRaw}, _Sample) ->
-%%   Type = if (DType == correct) and (QTType == correct) and (QCType == correct)-> correct;
-%% 	    true -> error
-%% 	 end,
-%%   {Type, 1, [#question{qname = DParsed, qtype = QTParsed, qclass = QCParsed}],
-%%    <<DRaw/binary, QTRaw/binary, QCRaw/binary>>};
-%% build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, QClasses, Sample) ->
-%%   BuildQuestion = fun(QClass) ->
-%% 		      Sample, build_questions({DType, DParsed, DRaw},
-%% 					      {QTType, QTParsed, QTRaw},
-%% 					      QClass, Sample)
-%% 		  end,
-%%   n_of(Sample, lists:flatten(lists:map(BuildQuestion, QClasses)));
-%% build_questions({DType, DParsed, DRaw}, QTypes, QClasses, Sample) ->
-%%   BuildQuestion = fun(QType) ->
-%% 		      n_of(Sample, build_questions({DType, DParsed, DRaw},
-%% 						   QType, QClasses, Sample))
-%% 		  end,
-%%   lists:flatten(lists:map(BuildQuestion, QTypes));
-%% build_questions(Domains, QTypes, QClasses, Sample) ->
-%%   BuildQuestion = fun(Domain) ->
-%% 		      n_of(Sample, build_questions(Domain, QTypes, QClasses, Sample))
-%% 		  end,
-%%   n_of(Sample, lists:flatten(lists:map(BuildQuestion, Domains))).
+%% @doc Having a list of Questions build the unparsing tests.
+%% @private Internal helper function.
+%% @todo tail-optimize.
+%% @since 0.2.0
+questions_unparsing_tests([]) -> [];
+questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
+    Noise = list_to_binary(noise()),
+    CRaw = <<Raw/binary, Noise/binary>>,            % Complete raw, add noise.
+    CParsed = {questions, Parsed, Noise},           % Complete parsed, add signature and noise.
+    RawToTest = (catch unparse_questions(CParsed)), % Perform the unparsing.
+    Desc = lists:flatten(                           % Some useful description
+             io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, RawToTest])),
+    case Type of   % What kind of test is it ?
+        correct ->
+            [{Desc, ?_assert(RawToTest == CRaw)} | questions_unparsing_tests(Questions)];
+        error   ->
+            [{Desc, ?_assert((RawToTest == {error, invalid}) or % We should get an error
+                             (RawToTest /= CRaw))} |            % or plain wrong data (not an exception).
+             questions_unparsing_tests(Questions)]
+    end.
 
-%% %% @doc Combine each question in Question with every other item in Questions up to N. 
-%% %% @private Internal helper function.
-%% %% @since 0.2.0
-%% build_questions(_Questions, 0, _Sample) -> [];
-%% build_questions(Questions, 1, Sample) -> n_of(Sample, Questions);
-%% build_questions(Questions, N, Sample) ->
-%%   NewQuestions = n_of(Sample, build_questions(Questions, N - 1, Sample)),
-%%   Comb = fun(Question) ->              % Function to combine one question to NewQuestions.
-%% 	     one_question_per_questions(Question, NewQuestions) end, 
-%%   n_of(Sample, lists:flatten(lists:map(Comb, Questions))).
+%% @doc Using domains Domains, QTypes and QClasses build all possible questions up to length Length (that is, chained questions). 
+%% @private Internal helper function.
+%% @since 0.2.0
+build_questions(Domains, QTypes, QClasses, Length, Sample) ->
+    Questions = n_of(Sample, build_questions(Domains, QTypes, QClasses, Sample)),
+    BuildQuestions = fun(N, NewQuestions) ->                           % Function to build questions of N length and append it to NewQuestions.
+                             NewQuestions ++ build_questions(Questions, N, Sample)
+                     end,
+    n_of(Sample, lists:foldl(BuildQuestions, [], lists:seq(1, Length))).
 
-%% %% @doc Combine one question with every other list of questions (in Questions).
-%% %% @private Internal helper function.
-%% %% @since 0.2.0
-%% one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
-%%   Comb = fun({Type2, Count2, Parsed2, Raw2}) ->
-%% 	     NewType = if (Type == correct) and (Type2 == correct) -> correct;
-%% 			  true -> error end,
-%% 	     {NewType,
-%% 	      Count + Count2,
-%% 	      lists:append(Parsed, Parsed2),
-%% 	      <<Raw/binary, Raw2/binary>>}
-%% 	 end,
-%%   lists:map(Comb, Questions).
+%% @doc Make all the possible combinations for a set of Domains, QTypes and QClasses. 
+%% @private Internal helper function.
+%% @since 0.2.0
+build_questions([], _QTypes, _QClasses, _Sample) -> [];
+build_questions(_Domains, [], _QClasses, _Sample) -> [];
+build_questions(_Domains, _QTypes, [], _Sample) -> [];
+build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, {QCType, QCParsed, QCRaw}, _Sample) ->
+    Type = if (DType == correct) and (QTType == correct) and (QCType == correct) -> correct;
+              true -> error
+           end,
+    {Type, 1,
+     [#question{qname = DParsed, qtype = QTParsed, qclass = QCParsed}],
+     <<DRaw/binary, QTRaw/binary, QCRaw/binary>>};
+build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, QClasses, Sample) ->
+    BuildQuestion = fun(QClass) ->
+                            Sample, build_questions({DType, DParsed, DRaw},
+                                                    {QTType, QTParsed, QTRaw},
+                                                    QClass, Sample)
+                    end,
+    n_of(Sample, lists:flatten(lists:map(BuildQuestion, QClasses)));
+build_questions({DType, DParsed, DRaw}, QTypes, QClasses, Sample) ->
+    BuildQuestion = fun(QType) ->
+                            n_of(Sample, build_questions({DType, DParsed, DRaw},
+                                                         QType, QClasses, Sample))
+                    end,
+    lists:flatten(lists:map(BuildQuestion, QTypes));
+build_questions(Domains, QTypes, QClasses, Sample) ->
+    BuildQuestion = fun(Domain) ->
+                            n_of(Sample, build_questions(Domain, QTypes, QClasses, Sample))
+                    end,
+    n_of(Sample, lists:flatten(lists:map(BuildQuestion, Domains))).
+
+%% @doc Combine each question in Question with every other item in Questions up to N. 
+%% @private Internal helper function.
+%% @since 0.2.0
+build_questions(_Questions, 0, _Sample) -> [];
+build_questions(Questions, 1, Sample) -> n_of(Sample, Questions);
+build_questions(Questions, N, Sample) ->
+    NewQuestions = n_of(Sample, build_questions(Questions, N - 1, Sample)),
+    Comb = fun(Question) ->              % Function to combine one question to NewQuestions.
+                   one_question_per_questions(Question, NewQuestions) end, 
+    n_of(Sample, lists:flatten(lists:map(Comb, Questions))).
+
+%% @doc Combine one question with every other list of questions (in Questions).
+%% @private Internal helper function.
+%% @since 0.2.0
+one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
+    Comb = fun({Type2, Count2, Parsed2, Raw2}) ->
+                   NewType = if (Type == correct) and (Type2 == correct) -> correct;
+                                true -> error end,
+                   {NewType,
+                    Count + Count2,
+                    lists:append(Parsed, Parsed2),
+                    <<Raw/binary, Raw2/binary>>}
+           end,
+    lists:map(Comb, Questions).
 
 
-%% %% @doc Having a list of Questions build the parsing tests.
-%% %% @private Internal helper function.
-%% %% @todo tail-optimize.
-%% %% @since 0.2.0
-%% questions_parsing_tests([]) -> [];
-%% questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
-%%   Noise = list_to_binary(noise()),
-%%   CRaw = <<Raw/binary, Noise/binary>>,                 % Complete raw, add noise.
-%%   CParsed = {questions, Parsed, Noise},                % Complete parsed, add signature and noise.
-%%   ParsedToTest = (catch parse_questions(Count, CRaw)), % Perform the parsing.
-%%   Desc = lists:flatten(                                % Some useful description
-%% 	   io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, ParsedToTest])),
-%%   case Type of   % What kind of test is it ?
-%%     correct ->
-%%       [{Desc, ?_assert(ParsedToTest == CParsed)} | questions_parsing_tests(Questions)];
-%%     error   -> 
-%%       [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
-%% 		       (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
-%%        questions_parsing_tests(Questions)]
-%%   end.
-
-%% %% @doc Having a list of Questions build the unparsing tests.
-%% %% @private Internal helper function.
-%% %% @todo tail-optimize.
-%% %% @since 0.2.0
-%% questions_unparsing_tests([]) -> [];
-%% questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
-%%   Noise = list_to_binary(noise()),
-%%   CRaw = <<Raw/binary, Noise/binary>>,            % Complete raw, add noise.
-%%   CParsed = {questions, Parsed, Noise},           % Complete parsed, add signature and noise.
-%%   RawToTest = (catch unparse_questions(CParsed)), % Perform the unparsing.
-%%   Desc = lists:flatten(                           % Some useful description
-%% 	   io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, RawToTest])),
-%%   case Type of   % What kind of test is it ?
-%%     correct ->
-%%       [{Desc, ?_assert(RawToTest == CRaw)} | questions_unparsing_tests(Questions)];
-%%     error   -> 
-%%       [{Desc, ?_assert((RawToTest == {error, invalid}) or % We should get an error
-%% 		       (RawToTest /= CRaw))} |            % or plain wrong data (not an exception).
-%%        questions_unparsing_tests(Questions)]
-%%   end.
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %% Resource Record Parsing and Unparsing Testing %%
