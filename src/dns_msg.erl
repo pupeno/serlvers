@@ -478,12 +478,10 @@ rcode_parsing_tests([{Type, Parsed, Raw}|RCodes]) ->
     ParsedToTest = parse_rcode(Raw), % Perform the parsing.
     Desc = lists:flatten(            % Some useful description.
              io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
-    [{Desc,
-      case Type of % What kind of test is it ?
-          correct -> ?_assert(ParsedToTest == Parsed);
-          error   -> ?_assert((ParsedToTest == {error, invalid})) % We should get an error.
-      end} 
-      | rcode_parsing_tests(RCodes)].
+    [{Desc, case Type of % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == Parsed);
+                error   -> ?_assert((ParsedToTest == {error, invalid})) % We should get an error.
+            end} | rcode_parsing_tests(RCodes)].
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -502,15 +500,13 @@ domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
     Desc = lists:flatten(                        % Some useful description
              io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, ParsedToTest])),
 
-    case Type of % What kind of test is it ?
-        correct ->
-            [{Desc, ?_assert(ParsedToTest == CParsed)} |
-             domain_parsing_tests(Domains)];
-        error   ->
-            [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
-                             (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
-             domain_parsing_tests(Domains)]
-    end.
+    [{Desc, case Type of % What kind of test is it ?
+                correct ->
+                    ?_assert(ParsedToTest == CParsed);
+                error   ->
+                    ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
+                             (ParsedToTest /= CParsed))            % or plain wrong data (not an exception).
+            end} | domain_parsing_tests(Domains)].
 
 %% @doc Having a list of Domains build all the unparsing tests to be used by EUnit.
 %% @private Internal helper function.
@@ -525,14 +521,13 @@ domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
     Desc = lists:flatten(                        % Some useful description
              io_lib:format("~w, ~w, ~w, ~w", [Type, CParsed, CRaw, RawToTest])),
 
-    case Type of % What kind of test is it ?
-        correct ->
-            [{Desc, ?_assert(RawToTest == CRaw)} | domain_unparsing_tests(Domains)];
-        error   ->
-            [{Desc, ?_assert((RawToTest == {error, invalid}) or % We should get an error
-                             (RawToTest /= CRaw))} |            % or plain wrong data (not an exception).
-             domain_unparsing_tests(Domains)]
-    end.
+    [{Desc, case Type of % What kind of test is it ?
+                correct ->
+                    ?_assert(RawToTest == CRaw);
+                error   ->
+                    ?_assert((RawToTest == {error, invalid}) or % We should get an error
+                             (RawToTest /= CRaw))               % or plain wrong data (not an exception).
+            end} | domain_unparsing_tests(Domains)].
 
 %% @doc Using lables Labels, build all possible domains from those of length 1 to length Length.
 %% @private Internal helper function.
@@ -589,14 +584,14 @@ questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
     ParsedToTest = (catch parse_questions(Count, CRaw)), % Perform the parsing.
     Desc = lists:flatten(                                % Some useful description
              io_lib:format("~p, ~p, ~p, ~p, ~p", [Type, CParsed, Count, CRaw, ParsedToTest])),
-    case Type of   % What kind of test is it ?
-        correct ->
-            [{Desc, ?_assert(ParsedToTest == CParsed)} | questions_parsing_tests(Questions)];
-        error   ->
-            [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
-                             (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
-             questions_parsing_tests(Questions)]
-    end.
+    
+    [{Desc, case Type of   % What kind of test is it ?
+                correct ->
+                    ?_assert(ParsedToTest == CParsed);
+                error   ->
+                    ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
+                             (ParsedToTest /= CParsed))            % or plain wrong data (not an exception).
+            end} | questions_parsing_tests(Questions)].
 
 %% @doc Having a list of Questions build the unparsing tests.
 %% @private Internal helper function.
@@ -610,14 +605,13 @@ questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
     RawToTest = (catch unparse_questions(CParsed)), % Perform the unparsing.
     Desc = lists:flatten(                           % Some useful description
              io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, RawToTest])),
-    case Type of   % What kind of test is it ?
-        correct ->
-            [{Desc, ?_assert(RawToTest == CRaw)} | questions_unparsing_tests(Questions)];
-        error   ->
-            [{Desc, ?_assert((RawToTest == {error, invalid}) or % We should get an error
-                             (RawToTest /= CRaw))} |            % or plain wrong data (not an exception).
-             questions_unparsing_tests(Questions)]
-    end.
+    [{Desc, case Type of   % What kind of test is it ?
+                correct ->
+                    ?_assert(RawToTest == CRaw);
+                error   ->
+                    ?_assert((RawToTest == {error, invalid}) or % We should get an error
+                             (RawToTest /= CRaw))               % or plain wrong data (not an exception).
+            end} | questions_unparsing_tests(Questions)].
 
 %% @doc Using domains Domains, QTypes and QClasses build all possible questions up to length Length (that is, chained questions). 
 %% @private Internal helper function.
