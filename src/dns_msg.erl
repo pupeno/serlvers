@@ -478,7 +478,7 @@ rcode_parsing_tests([{Type, Parsed, Raw}|RCodes]) ->
     ParsedToTest = parse_rcode(Raw), % Perform the parsing.
     Desc = lists:flatten(            % Some useful description.
              io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
-    [{Desc, case Type of % What kind of test is it ?
+    [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == Parsed);
                 error   -> ?_assert((ParsedToTest == {error, invalid})) % We should get an error.
             end} | rcode_parsing_tests(RCodes)].
@@ -499,8 +499,7 @@ domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
     ParsedToTest = (catch parse_domain(CRaw)),   % Perform the parsing.
     Desc = lists:flatten(                        % Some useful description
              io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, ParsedToTest])),
-
-    [{Desc, case Type of % What kind of test is it ?
+    [{Desc, case Type of                                           % What kind of test is it ?
                 correct ->
                     ?_assert(ParsedToTest == CParsed);
                 error   ->
@@ -520,8 +519,7 @@ domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
     {raw_domain, RawToTest} = (catch unparse_domain(CParsed)), % Perform the unparsing.
     Desc = lists:flatten(                        % Some useful description
              io_lib:format("~w, ~w, ~w, ~w", [Type, CParsed, CRaw, RawToTest])),
-
-    [{Desc, case Type of % What kind of test is it ?
+    [{Desc, case Type of                                        % What kind of test is it ?
                 correct ->
                     ?_assert(RawToTest == CRaw);
                 error   ->
@@ -584,8 +582,7 @@ questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
     ParsedToTest = (catch parse_questions(Count, CRaw)), % Perform the parsing.
     Desc = lists:flatten(                                % Some useful description
              io_lib:format("~p, ~p, ~p, ~p, ~p", [Type, CParsed, Count, CRaw, ParsedToTest])),
-    
-    [{Desc, case Type of   % What kind of test is it ?
+    [{Desc, case Type of                                           % What kind of test is it ?
                 correct ->
                     ?_assert(ParsedToTest == CParsed);
                 error   ->
@@ -605,7 +602,7 @@ questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
     RawToTest = (catch unparse_questions(CParsed)), % Perform the unparsing.
     Desc = lists:flatten(                           % Some useful description
              io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, RawToTest])),
-    [{Desc, case Type of   % What kind of test is it ?
+    [{Desc, case Type of                                        % What kind of test is it ?
                 correct ->
                     ?_assert(RawToTest == CRaw);
                 error   ->
