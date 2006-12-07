@@ -17,7 +17,6 @@
 -module(dns_msg).
 
 -export([parse_message/1]).
-%%-export([test/2]).
 
 -compile(export_all).
 
