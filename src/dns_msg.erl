@@ -61,8 +61,7 @@ parse_message(RawMsg) ->
     %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
 
     %% Separate header (in each of it fields) and body.
-    <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16,
-     ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
+    <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
 
     %% TODO: catch or something the return of {error, invalid} to return {error, invalid} from any of the parsing functions.
     %% Parse the questions and each of the other resource record sections.
