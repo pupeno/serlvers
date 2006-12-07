@@ -431,97 +431,100 @@ rcode_to_atom(5) -> refused.
  		 {correct, not_implemented, <<4:4>>},
  		 {correct, refused,         <<5:4>>}]).
 
-%% %% @doc Generates and run all tests.
-%% %% @since 0.2.0
-%% test(Factor, Sample) ->
-%%   Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
-%%   DomainParsingTests = domain_parsing_tests(Domains),
-%%   DomainUnparsingTests = domain_unparsing_tests(Domains),
+%% @doc Generates and run all tests.
+%% @since 0.2.0
+all_test_() ->
+    Factor = 3,
+    Sample = 25,
+    Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
+    DomainParsingTests = domain_parsing_tests(Domains),
+%%    DomainUnparsingTests = domain_unparsing_tests(Domains),
 
-%%   Questions = build_questions(Domains, ?QTYPES, ?QCLASSES, Factor, Sample),
-%%   QuestionsParsingTests = questions_parsing_tests(Questions),
-%%   QuestionsUnparsingTests = questions_unparsing_tests(Questions),
+%%    Questions = build_questions(Domains, ?QTYPES, ?QCLASSES, Factor, Sample),
+%%    QuestionsParsingTests = questions_parsing_tests(Questions),
+%%    QuestionsUnparsingTests = questions_unparsing_tests(Questions),
 
-%%   %% TODO: make these tests dynamic as the previous ones.
-%%   %%Types = n_of(Sample, ?TYPES),
-%%   %%Classes = n_of(Sample, ?CLASSES),
-%%   %%RRs = n_of(Sample, build_resource_records(Domains, Types, Classes, Factor)),
-%%   RRsParsingTests = tests_resource_record_parsing(),
+    %% TODO: make these tests dynamic as the previous ones.
+    %%Types = n_of(Sample, ?TYPES),
+    %%Classes = n_of(Sample, ?CLASSES),
+    %%RRs = n_of(Sample, build_resource_records(Domains, Types, Classes, Factor)),
+%%    RRsParsingTests = tests_resource_record_parsing(),
 
-%%   %% TODO: make these tests dynamic as the previous ones.
-%%   MessageParsingTests = tests_message_parsing(),
+    %% TODO: make these tests dynamic as the previous ones.
+%%    MessageParsingTests = tests_message_parsing(),
 
-
-%%   eunit:test(DomainParsingTests ++ DomainUnparsingTests ++
-%% 	     QuestionsParsingTests ++ QuestionsUnparsingTests ++
-%% 	     RRsParsingTests ++ 
-%% 	     MessageParsingTests).
+%%    eunit:test(DomainParsingTests ++ DomainUnparsingTests ++
+%%               QuestionsParsingTests ++ QuestionsUnparsingTests ++
+%%               RRsParsingTests ++
+%%               MessageParsingTests).
+    DomainParsingTests.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Domain Parsing and Unparsing testing %%%%%%
 
-%% %% @doc Using lables Labels, build all possible domains from those of length 1 to length Length. 
-%% %% @private Internal helper function.
-%% %% @since 0.2.0
-%% build_domains(Labels, Length, Sample) ->
-%%   SampleOfLabels = n_of(Sample, Labels),
-%%   BuildDomains = fun(N, Domains) ->                              % Function to build domains of N length and append it to Domains.
-%% 		     Domains ++ build_domains_(SampleOfLabels, N, Sample)
-%% 		 end,
-%%   Domains = lists:foldl(BuildDomains, [], lists:seq(1, Length)), % Build all possible domains up to Length.
-%%   NullTerm = fun({Type, ParsedDomain, RawDomain}) ->             % Function to add the null character to the domain.
-%% 		 {Type, ParsedDomain, <<RawDomain/binary, 0>>}
-%% 	     end,
-%%   n_of(Sample, lists:map(NullTerm, Domains)).                    % Add the null character to the end of each domains.
 
-%% %% @doc Having a set of labels build domains names of N labels.
-%% %% @private Internal helper function.
-%% %% @todo Find a better name for this function.
-%% %% @since 0.2.0
-%% build_domains_(_Labels, 0, _Sample) -> [];
-%% build_domains_(Labels, 1, Sample) -> n_of(Sample, Labels);
-%% build_domains_(Labels, Length, Sample) ->
-%%   Domains = n_of(Sample, build_domains_(Labels, Length - 1, Sample)),
-%%   Comb = fun(Label) ->                        % Function to combine one label to NewDomains.
-%% 	     one_domain_per_domain(Label, Domains)
-%% 	 end, 
-%%   n_of(10, lists:flatten(lists:map(Comb, Labels))).
+%% @doc Having a list of Domains build all the parsing tests to be used by EUnit.
+%% @private Internal helper function.
+%% @todo tail-optimize.
+%% @since 0.2.0
+domain_parsing_tests([]) -> [];
+domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
+    Noise = list_to_binary(noise()),
+    CRaw = <<Raw/binary, Noise/binary>>,         % Complete raw, add noise.
+    CParsed = {domain, Parsed, Noise},           % Complete parsed, add signature and noise.
+    ParsedToTest = (catch parse_domain(CRaw)),   % Perform the parsing.
+    Desc = lists:flatten(                        % Some useful description
+             io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, ParsedToTest])),
 
-%% %% @doc Having one label combine it with each domain of a list.
-%% %% @private Internal helper function.
-%% %% @since 0.2.0
-%% one_domain_per_domain({Type, Parsed, Raw}, Domains) ->
-%%   Comb = fun({Type2, Parsed2, Raw2}) ->  % Function to combine two domains.
-%% 	     if (Type == correct) and (Type2 == correct) ->
-%% 		 {correct, lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>};
-%% 		true ->
-%% 		 {error, lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>}
-%% 	     end
-%% 	 end,
-%%   lists:map(Comb, Domains).
+    case Type of % What kind of test is it ?
+        correct ->
+            [{Desc, ?_assert(ParsedToTest == CParsed)} |
+             domain_parsing_tests(Domains)];
+        error   -> 
+            [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
+                             (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
+             domain_parsing_tests(Domains)]
+    end.
 
-%% %% @doc Having a list of Domains build all the parsing tests to be used by EUnit.
-%% %% @private Internal helper function.
-%% %% @todo tail-optimize.
-%% %% @since 0.2.0
-%% domain_parsing_tests([]) -> [];
-%% domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
-%%   Noise = list_to_binary(noise()),
-%%   CRaw = <<Raw/binary, Noise/binary>>,         % Complete raw, add noise.
-%%   CParsed = {domain, Parsed, Noise},           % Complete parsed, add signature and noise.
-%%   ParsedToTest = (catch parse_domain(CRaw)),   % Perform the parsing.
-%%   Desc = lists:flatten(                        % Some useful description
-%% 	   io_lib:format("~p, ~p, ~p, ~p", [Type, CParsed, CRaw, ParsedToTest])),
+%% @doc Using lables Labels, build all possible domains from those of length 1 to length Length.
+%% @private Internal helper function.
+%% @since 0.2.0
+build_domains(Labels, Length, Sample) ->
+    SampleOfLabels = n_of(Sample, Labels),
+    BuildDomains = fun(N, Domains) ->                              % Function to build domains of N length and append it to Domains.
+                           Domains ++ build_domains_(SampleOfLabels, N, Sample)
+                   end,
+    Domains = lists:foldl(BuildDomains, [], lists:seq(1, Length)), % Build all possible domains up to Length.
+    NullTerm = fun({Type, ParsedDomain, RawDomain}) ->             % Function to add the null character to the domain.
+                       {Type, ParsedDomain, <<RawDomain/binary, 0>>}
+               end,
+    n_of(Sample, lists:map(NullTerm, Domains)).                    % Add the null character to the end of each domains.
 
-%%   case Type of % What kind of test is it ?
-%%     correct ->
-%%       [{Desc, ?_assert(ParsedToTest == CParsed)} |
-%%        domain_parsing_tests(Domains)];
-%%     error   -> 
-%%       [{Desc, ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
-%% 		       (ParsedToTest /= CParsed))} |         % or plain wrong data (not an exception).
-%%        domain_parsing_tests(Domains)]
-%%   end.
+%% @doc Having a set of labels build domains names of N labels.
+%% @private Internal helper function.
+%% @todo Find a better name for this function.
+%% @since 0.2.0
+build_domains_(_Labels, 0, _Sample) -> [];
+build_domains_(Labels, 1, Sample) -> n_of(Sample, Labels);
+build_domains_(Labels, Length, Sample) ->
+    Domains = n_of(Sample, build_domains_(Labels, Length - 1, Sample)),
+    Comb = fun(Label) ->                        % Function to combine one label to NewDomains.
+                   one_domain_per_domain(Label, Domains)
+           end, 
+    n_of(10, lists:flatten(lists:map(Comb, Labels))).
+
+%% @doc Having one label combine it with each domain of a list.
+%% @private Internal helper function.
+%% @since 0.2.0
+one_domain_per_domain({Type, Parsed, Raw}, Domains) ->
+    Comb = fun({Type2, Parsed2, Raw2}) ->  % Function to combine two domains.
+                   if (Type == correct) and (Type2 == correct) ->
+                           {correct, lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>};
+                      true ->
+                           {error, lists:append(Parsed, Parsed2), <<Raw/binary, Raw2/binary>>}
+                   end
+           end,
+    lists:map(Comb, Domains).
 
 %% %% @doc Having a list of Domains build all the unparsing tests to be used by EUnit.
 %% %% @private Internal helper function.
