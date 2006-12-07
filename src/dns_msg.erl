@@ -71,9 +71,9 @@ parse_message(RawMsg) ->
     {resource_records, Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
 
     %% Build the messag.
-    #dns_message{id = ID, qr = qr_to_atom(QR), opcode = opcode_to_atom(Opcode),
-                 aa = bool_to_atom(AA), tc = bool_to_atom(TC), rd = bool_to_atom(RD),
-                 ra = bool_to_atom(RA), rcode = rcode_to_atom(RCODE), question = Questions,
+    #dns_message{id = ID, qr = parse_qr(QR), opcode = parse_opcode(Opcode),
+                 aa = parse_bool(AA), tc = parse_bool(TC), rd = parse_bool(RD),
+                 ra = parse_bool(RA), rcode = parse_rcode(RCODE), question = Questions,
                  answer = Answer, authority = Authority, additional = Additional}.
 
 
@@ -340,31 +340,32 @@ unparse_qclass(Class) -> unparse_class(Class).
 %% @doc Turn a numeric DNS QR into an atom.
 %% @private Internal helper function.
 %% @since 0.2.0
-qr_to_atom(0) -> query_;
-qr_to_atom(1) -> response.
+parse_qr(0) -> query_;
+parse_qr(1) -> response.
 
 %% @doc Turn a numeric DNS Opcode into an atom.
 %% @private Internal helper function.
 %% @since 0.2.0
-opcode_to_atom(0) -> query_;
-opcode_to_atom(1) -> iquery;
-opcode_to_atom(2) -> status.
+parse_opcode(0) -> query_;
+parse_opcode(1) -> iquery;
+parse_opcode(2) -> status.
 
-%% @doc Turn a numeric boolean where 0 is false and 1 is true into an atom.
+%% @doc Parse DNS RCodes.
 %% @private Internal helper function.
 %% @since 0.2.0
-bool_to_atom(0) -> false;
-bool_to_atom(1) -> true.
+parse_rcode(0) -> no_error;
+parse_rcode(1) -> format_error;
+parse_rcode(2) -> server_failure;
+parse_rcode(3) -> name_error;
+parse_rcode(4) -> not_implemented;
+parse_rcode(5) -> refused;
+parse_rcode(_) -> {error, invalid}.
 
-%% @doc Turn a numeric DNS RCODE into an atom.
+%% @doc Parse boolean values.
 %% @private Internal helper function.
 %% @since 0.2.0
-rcode_to_atom(0) -> no_error;
-rcode_to_atom(1) -> format_error;
-rcode_to_atom(2) -> server_failure;
-rcode_to_atom(3) -> name_error;
-rcode_to_atom(4) -> not_implemented;
-rcode_to_atom(5) -> refused.
+parse_bool(0) -> false;
+parse_bool(1) -> true.
 
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
