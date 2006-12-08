@@ -496,18 +496,6 @@ all_test_() ->
     Factor = 4,
     Sample = 40,
 
-    BoolParsingTests = bool_parsing_tests(?BOOLEANS),
-    BoolUnparsingTests = bool_unparsing_tests(?BOOLEANS),
-
-    RCodeParsingTests = rcode_parsing_tests(?RCODES),
-    RCodeUparsingTests = rcode_unparsing_tests(?RCODES),
-
-    OpCodeParsingTests = opcode_parsing_tests(?OPCODES),
-    OpCodeUparsingTests = opcode_unparsing_tests(?OPCODES),
-
-    QrParsingTests = qr_parsing_tests(?QRS),
-    QrUparsingTests = qr_unparsing_tests(?QRS),
-
     Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
     DomainParsingTests = domain_parsing_tests(Domains),
     DomainUnparsingTests = domain_unparsing_tests(Domains),
@@ -525,104 +513,9 @@ all_test_() ->
     %% TODO: make these tests dynamic as the previous ones.
 %%    MessageParsingTests = tests_message_parsing(),
 
-    BoolParsingTests ++ BoolUnparsingTests ++
-        RCodeParsingTests ++ RCodeUparsingTests ++
-        OpCodeParsingTests ++ OpCodeUparsingTests ++
-        QrParsingTests ++ QrUparsingTests ++
-        DomainParsingTests ++ DomainUnparsingTests ++
-        QuestionsParsingTests. %%, QuestionsUnparsingTests.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%% Bool Parsing and Unparsing testing %%%%%%
-
-bool_parsing_tests([]) -> [];
-bool_parsing_tests([{Type, Parsed, Raw}|Bools]) ->
-    ParsedToTest = parse_bool(Raw),  % Perform the parsing.
-    Desc = lists:flatten(            % Some useful description.
-             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
-    [{Desc, case Type of                                                % What kind of test is it ?
-                correct -> ?_assert(ParsedToTest == {bool, Parsed});
-                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
-            end} | bool_parsing_tests(Bools)].
-
-bool_unparsing_tests([]) -> [];
-bool_unparsing_tests([{Type, Parsed, Raw}|Bools]) ->
-    RawToTest = unparse_bool(Parsed), % Perform the parsing.
-    Desc = lists:flatten(                % Some useful description.
-             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
-    [{Desc, case Type of                                                % What kind of test is it ?
-                correct -> ?_assert(RawToTest == {raw_bool, Raw});
-                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
-            end} | bool_unparsing_tests(Bools)].
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%% RCode Parsing and Unparsing testing %%%%%%
-
-rcode_parsing_tests([]) -> [];
-rcode_parsing_tests([{Type, Parsed, Raw}|RCodes]) ->
-    ParsedToTest = parse_rcode(Raw), % Perform the parsing.
-    Desc = lists:flatten(            % Some useful description.
-             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
-    [{Desc, case Type of                                                % What kind of test is it ?
-                correct -> ?_assert(ParsedToTest == {rcode, Parsed});
-                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
-            end} | rcode_parsing_tests(RCodes)].
-
-rcode_unparsing_tests([]) -> [];
-rcode_unparsing_tests([{Type, Parsed, Raw}|RCodes]) ->
-    RawToTest = unparse_rcode(Parsed), % Perform the parsing.
-    Desc = lists:flatten(                % Some useful description.
-             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
-    [{Desc, case Type of                                                % What kind of test is it ?
-                correct -> ?_assert(RawToTest == {raw_rcode, Raw});
-                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
-            end} | rcode_unparsing_tests(RCodes)].
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%% OpCode Parsing and Unparsing testing %%%%%%
-
-opcode_parsing_tests([]) -> [];
-opcode_parsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
-    ParsedToTest = parse_opcode(Raw), % Perform the parsing.
-    Desc = lists:flatten(            % Some useful description.
-             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
-    [{Desc, case Type of                                                % What kind of test is it ?
-                correct -> ?_assert(ParsedToTest == {opcode, Parsed});
-                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
-            end} | opcode_parsing_tests(OpCodes)].
-
-opcode_unparsing_tests([]) -> [];
-opcode_unparsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
-    RawToTest = unparse_opcode(Parsed), % Perform the parsing.
-    Desc = lists:flatten(                % Some useful description.
-             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
-    [{Desc, case Type of                                                % What kind of test is it ?
-                correct -> ?_assert(RawToTest == {raw_opcode, Raw});
-                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
-            end} | opcode_unparsing_tests(OpCodes)].
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%% Qr Parsing and Unparsing testing %%%%%%
-
-qr_parsing_tests([]) -> [];
-qr_parsing_tests([{Type, Parsed, Raw}|Qrs]) ->
-    ParsedToTest = parse_qr(Raw), % Perform the parsing.
-    Desc = lists:flatten(            % Some useful description.
-             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
-    [{Desc, case Type of                                                % What kind of test is it ?
-                correct -> ?_assert(ParsedToTest == {qr, Parsed});
-                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
-            end} | qr_parsing_tests(Qrs)].
-
-qr_unparsing_tests([]) -> [];
-qr_unparsing_tests([{Type, Parsed, Raw}|Qrs]) ->
-    RawToTest = unparse_qr(Parsed), % Perform the parsing.
-    Desc = lists:flatten(                % Some useful description.
-             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
-    [{Desc, case Type of                                                % What kind of test is it ?
-                correct -> ?_assert(RawToTest == {raw_qr, Raw});
-                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
-            end} | qr_unparsing_tests(Qrs)].
+    %%DomainParsingTests ++ DomainUnparsingTests ++
+    %%QuestionsParsingTests. %%, QuestionsUnparsingTests.
+    [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Domain Parsing and Unparsing testing %%%%%%
@@ -817,8 +710,6 @@ one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
            end,
     lists:map(Comb, Questions).
 
-
-
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %% Resource Record Parsing and Unparsing Testing %%
 
@@ -846,6 +737,160 @@ one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
 %% %%build_messages(_Questions, _RRs) ->
 %% %%  [].
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% Qr Parsing and Unparsing testing %%%%%%
+
+qr_parsing_test_() -> qr_parsing_tests(?QRS).
+qr_parsing_tests([]) -> [];
+qr_parsing_tests([{Type, Parsed, Raw}|Qrs]) ->
+    ParsedToTest = parse_qr(Raw), % Perform the parsing.
+    Desc = lists:flatten(            % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == {qr, Parsed});
+                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+            end} | qr_parsing_tests(Qrs)].
+
+qr_unparsing_test_() -> qr_unparsing_tests(?QRS).
+qr_unparsing_tests([]) -> [];
+qr_unparsing_tests([{Type, Parsed, Raw}|Qrs]) ->
+    RawToTest = unparse_qr(Parsed), % Perform the parsing.
+    Desc = lists:flatten(                % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_qr, Raw});
+                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+            end} | qr_unparsing_tests(Qrs)].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% OpCode Parsing and Unparsing testing %%%%%%
+
+opcode_parsing_test_() -> opcode_parsing_tests(?OPCODES).
+opcode_parsing_tests([]) -> [];
+opcode_parsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
+    ParsedToTest = parse_opcode(Raw), % Perform the parsing.
+    Desc = lists:flatten(            % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == {opcode, Parsed});
+                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+            end} | opcode_parsing_tests(OpCodes)].
+
+opcode_unparsing_test_() -> opcode_unparsing_tests(?OPCODES).
+opcode_unparsing_tests([]) -> [];
+opcode_unparsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
+    RawToTest = unparse_opcode(Parsed), % Perform the parsing.
+    Desc = lists:flatten(                % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_opcode, Raw});
+                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+            end} | opcode_unparsing_tests(OpCodes)].
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% RCode Parsing and Unparsing testing %%%%%%
+
+rcode_parsing_test_() -> rcode_parsing_tests(?RCODES).
+rcode_parsing_tests([]) -> [];
+rcode_parsing_tests([{Type, Parsed, Raw}|RCodes]) ->
+    ParsedToTest = parse_rcode(Raw), % Perform the parsing.
+    Desc = lists:flatten(            % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == {rcode, Parsed});
+                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+            end} | rcode_parsing_tests(RCodes)].
+
+rcode_unparsing_test_() -> rcode_unparsing_tests(?RCODES).
+rcode_unparsing_tests([]) -> [];
+rcode_unparsing_tests([{Type, Parsed, Raw}|RCodes]) ->
+    RawToTest = unparse_rcode(Parsed), % Perform the parsing.
+    Desc = lists:flatten(                % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_rcode, Raw});
+                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+            end} | rcode_unparsing_tests(RCodes)].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% Bool Parsing and Unparsing testing %%%%%%
+
+bool_parsing_test_() -> bool_parsing_tests(?BOOLEANS).
+bool_parsing_tests([]) -> [];
+bool_parsing_tests([{Type, Parsed, Raw}|Bools]) ->
+    ParsedToTest = parse_bool(Raw),  % Perform the parsing.
+    Desc = lists:flatten(            % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == {bool, Parsed});
+                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+            end} | bool_parsing_tests(Bools)].
+
+bool_unparsing_test_() -> bool_unparsing_tests(?BOOLEANS).
+bool_unparsing_tests([]) -> [];
+bool_unparsing_tests([{Type, Parsed, Raw}|Bools]) ->
+    RawToTest = unparse_bool(Parsed), % Perform the parsing.
+    Desc = lists:flatten(                % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_bool, Raw});
+                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+            end} | bool_unparsing_tests(Bools)].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% Error processing testing %%%%%%
+
+is_error_test_() ->
+    [?_assert(is_error({error, invalid}) == true),
+     ?_assert(is_error({error, whatever}) == true),
+     ?_assert(is_error(whatever) /= true)].
+
+any_error_test_() ->
+    A = {type_a, value_a},
+    B = {type_b, value_b},
+    [?_assert(any_error([A, B]) == {no_error, [A, B]}),
+     ?_assert(any_error([A, {error, invalid}]) == {error, [invalid]}),
+     ?_assert(any_error([{error, invalid}, {error, whatever}]) == {error, [invalid, whatever]})].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% Helper functions for testing %%%%%%
+
+%% @doc Return one random item out of a list.
+%% @private Internal helper function.
+%% @since 0.2.0
+one_of(L) ->
+    lists:nth(random:uniform(length(L)), L).
+
+%% @doc Return N random items out of a list.
+%% @private Internal helper function.
+%% @todo tail-optimize.
+%% @since 0.2.0
+n_of(all, L) -> L;
+n_of(N, L) ->
+    if length(L) < N -> L;
+       true -> n_of(N, L, [])
+    end.
+n_of(0, _L, NL) ->
+    NL;
+n_of(N, L, NL) ->
+    if length(L) =< N -> L;
+       true -> n_of(N - 1, L, [one_of(L)|NL])
+    end.
+
+%% @doc Generate some noise, that is a list of random length (less than 15) with random data.
+%%      The porpuse is to insert data in places where the system should not look at.
+%% @private Internal helper function.
+%% @since 0.2.0
+noise() ->
+    {I1,I2,I3} = erlang:now(),
+    random:seed(I1,I2,I3),
+    noise(random:uniform(15) - 1).
+
+noise(0) -> [];
+noise(Max) ->
+    [random:uniform(256) - 1 |
+     noise(Max - 1)].
 
 %% %%%%%%%%%%%%%%%%%% Old boring tests %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -945,51 +990,4 @@ one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
 %% 			   ?PC_NS_CHB/binary, ?PC_SOA_HSB/binary, ?SPC_A_ANYB/binary,
 %% 			   ?SPC_PTR_INB/binary>>))].
 
-%% %% @doc Return one random item out of a list.
-%% %% @private Internal helper function.
-%% %% @since 0.2.0
-one_of(L) ->
-    lists:nth(random:uniform(length(L)), L).
-
-%% @doc Return N random items out of a list.
-%% @private Internal helper function.
-%% @todo tail-optimize.
-%% @since 0.2.0
-n_of(all, L) -> L;
-n_of(N, L) ->
-    if length(L) < N -> L;
-       true -> n_of(N, L, [])
-    end.
-n_of(0, _L, NL) ->
-    NL;
-n_of(N, L, NL) ->
-    if length(L) =< N -> L;
-       true -> n_of(N - 1, L, [one_of(L)|NL])
-    end.
-
-%% @doc Generate some noise, that is a list of random length (less than 15) with random data.
-%%      The porpuse is to insert data in places where the system should not look at.
-%% @private Internal helper function.
-%% @since 0.2.0
-noise() ->
-    {I1,I2,I3} = erlang:now(),
-    random:seed(I1,I2,I3),
-    noise(random:uniform(15) - 1).
-
-noise(0) -> [];
-noise(Max) ->
-    [random:uniform(256) - 1 |
-     noise(Max - 1)].
-
-is_error_test_() ->
-    [?_assert(is_error({error, invalid}) == true),
-     ?_assert(is_error({error, whatever}) == true),
-     ?_assert(is_error(whatever) /= true)].
-
-any_error_test_() ->
-    A = {type_a, value_a},
-    B = {type_b, value_b},
-    [?_assert(any_error([A, B]) == {no_error, [A, B]}),
-     ?_assert(any_error([A, {error, invalid}]) == {error, [invalid]}),
-     ?_assert(any_error([{error, invalid}, {error, whatever}]) == {error, [invalid, whatever]})].
 -endif. %% ifdef(TEST).
