@@ -361,6 +361,17 @@ parse_rcode(4) -> {rcode, not_implemented};
 parse_rcode(5) -> {rcode, refused};
 parse_rcode(_) -> {error, invalid}.
 
+%% @doc Unparse DNS RCodes.
+%% @private Internal helper function.
+%% @since 0.2.0
+unparse_rcode(no_error) ->        {raw_rcode, 0};
+unparse_rcode(format_error) ->    {raw_rcode, 1};
+unparse_rcode(server_failure) ->  {raw_rcode, 2};
+unparse_rcode(name_error) ->      {raw_rcode, 3};
+unparse_rcode(not_implemented) -> {raw_rcode, 4};
+unparse_rcode(refused) ->         {raw_rcode, 5};
+unparse_rcode(_) ->               {error, invalid}.
+
 %% @doc Parse boolean values.
 %% @private Internal helper function.
 %% @since 0.2.0
@@ -444,6 +455,7 @@ all_test_() ->
     Sample = 20,
 
     RCodeParsingTests = rcode_parsing_tests(?RCODES),
+    RCodeUparsingTests = rcode_unparsing_tests(?RCODES),
 
     Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
     DomainParsingTests = domain_parsing_tests(Domains),
@@ -466,7 +478,7 @@ all_test_() ->
 %%               QuestionsParsingTests ++ QuestionsUnparsingTests ++
 %%               RRsParsingTests ++
 %%               MessageParsingTests).
-    RCodeParsingTests ++
+    RCodeParsingTests ++ RCodeUparsingTests ++
         DomainParsingTests ++ DomainUnparsingTests ++
         QuestionsParsingTests. %%, QuestionsUnparsingTests.
 
@@ -483,6 +495,15 @@ rcode_parsing_tests([{Type, Parsed, Raw}|RCodes]) ->
                 error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
             end} | rcode_parsing_tests(RCodes)].
 
+rcode_unparsing_tests([]) -> [];
+rcode_unparsing_tests([{Type, Parsed, Raw}|RCodes]) ->
+    RawToTest = unparse_rcode(Parsed), % Perform the parsing.
+    Desc = lists:flatten(                % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_rcode, Raw});
+                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+            end} | rcode_unparsing_tests(RCodes)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Domain Parsing and Unparsing testing %%%%%%
