@@ -474,10 +474,6 @@ all_test_() ->
     %% TODO: make these tests dynamic as the previous ones.
 %%    MessageParsingTests = tests_message_parsing(),
 
-%%    eunit:test(DomainParsingTests ++ DomainUnparsingTests ++
-%%               QuestionsParsingTests ++ QuestionsUnparsingTests ++
-%%               RRsParsingTests ++
-%%               MessageParsingTests).
     RCodeParsingTests ++ RCodeUparsingTests ++
         DomainParsingTests ++ DomainUnparsingTests ++
         QuestionsParsingTests. %%, QuestionsUnparsingTests.
