@@ -353,12 +353,12 @@ parse_opcode(2) -> status.
 %% @doc Parse DNS RCodes.
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_rcode(0) -> no_error;
-parse_rcode(1) -> format_error;
-parse_rcode(2) -> server_failure;
-parse_rcode(3) -> name_error;
-parse_rcode(4) -> not_implemented;
-parse_rcode(5) -> refused;
+parse_rcode(0) -> {rcode, no_error};
+parse_rcode(1) -> {rcode, format_error};
+parse_rcode(2) -> {rcode, server_failure};
+parse_rcode(3) -> {rcode, name_error};
+parse_rcode(4) -> {rcode, not_implemented};
+parse_rcode(5) -> {rcode, refused};
 parse_rcode(_) -> {error, invalid}.
 
 %% @doc Parse boolean values.
@@ -479,8 +479,8 @@ rcode_parsing_tests([{Type, Parsed, Raw}|RCodes]) ->
     Desc = lists:flatten(            % Some useful description.
              io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
-                correct -> ?_assert(ParsedToTest == Parsed);
-                error   -> ?_assert((ParsedToTest == {error, invalid})) % We should get an error.
+                correct -> ?_assert(ParsedToTest == {rcode, Parsed});
+                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
             end} | rcode_parsing_tests(RCodes)].
 
 
