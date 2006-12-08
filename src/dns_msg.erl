@@ -61,7 +61,7 @@ parse_message(RawMsg) ->
     %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
 
     %% Separate header (in each of it fields) and body.
-    <<ID:16, QR:1, Opcode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
+    <<ID:16, QR:1, OpCode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
 
     %% TODO: catch or something the return of {error, invalid} to return {error, invalid} from any of the parsing functions.
     %% Parse the questions and each of the other resource record sections.
@@ -71,7 +71,7 @@ parse_message(RawMsg) ->
     {resource_records, Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
 
     %% Build the messag.
-    #dns_message{id = ID, qr = parse_qr(QR), opcode = parse_opcode(Opcode),
+    #dns_message{id = ID, qr = parse_qr(QR), opcode = parse_opcode(OpCode),
                  aa = parse_bool(AA), tc = parse_bool(TC), rd = parse_bool(RD),
                  ra = parse_bool(RA), rcode = parse_rcode(RCODE), question = Questions,
                  answer = Answer, authority = Authority, additional = Additional}.
@@ -343,12 +343,21 @@ unparse_qclass(Class) -> unparse_class(Class).
 parse_qr(0) -> query_;
 parse_qr(1) -> response.
 
-%% @doc Turn a numeric DNS Opcode into an atom.
+%% @doc Parse an opcode.
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_opcode(0) -> query_;
-parse_opcode(1) -> iquery;
-parse_opcode(2) -> status.
+parse_opcode(0) -> {opcode, query_};
+parse_opcode(1) -> {opcode, iquery};
+parse_opcode(2) -> {opcode, status};
+parse_opcode(_) -> {error, invalid}.
+
+%% @doc Unpparse an opcode.
+%% @private Internal helper function.
+%% @since 0.2.0
+unparse_opcode(query_) -> {raw_opcode, 0};
+unparse_opcode(iquery) -> {raw_opcode, 1};
+unparse_opcode(status) -> {raw_opcode, 2};
+unparse_opcode(_) ->      {error, invalid}.
 
 %% @doc Parse DNS RCodes.
 %% @private Internal helper function.
@@ -437,10 +446,11 @@ unparse_bool(_) ->     {error, invalid}.
 -define(QRS, [{correct, query_,   <<0:1>>},
  	      {correct, response, <<1:1>>}]).
 
-%% DNS Opcodes to test the parser.
--define(OPCODES, [{correct, query_, <<0:4>>},
- 		  {correct, iquery, <<1:4>>},
- 		  {correct, status, <<2:4>>}]).
+%% DNS OpCodes to test the parser.
+-define(OPCODES, [{correct, query_, 0},
+ 		  {correct, iquery, 1},
+ 		  {correct, status, 2},
+                  {error,   err,    5}]).
 
 %% DNS RCodes to test the parser.
 -define(RCODES, [{correct, no_error,        0},
@@ -449,12 +459,12 @@ unparse_bool(_) ->     {error, invalid}.
  		 {correct, name_error,      3},
  		 {correct, not_implemented, 4},
  		 {correct, refused,         5},
-                 {error,   whatever,       10}]).
+                 {error,   err,            10}]).
 
 %% DNS Booleans to test the parser.
 -define(BOOLEANS, [{correct, false, 0},
  		   {correct, true,  1},
-                   {error, whatever, 10}]).
+                   {error,   err,  10}]).
 
 %% @doc Generates and run all tests.
 %% @since 0.2.0
@@ -467,6 +477,9 @@ all_test_() ->
 
     RCodeParsingTests = rcode_parsing_tests(?RCODES),
     RCodeUparsingTests = rcode_unparsing_tests(?RCODES),
+
+    OpCodeParsingTests = opcode_parsing_tests(?OPCODES),
+    OpCodeUparsingTests = opcode_unparsing_tests(?OPCODES),
 
     Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
     DomainParsingTests = domain_parsing_tests(Domains),
@@ -487,6 +500,7 @@ all_test_() ->
 
     BoolParsingTests ++ BoolUnparsingTests ++
         RCodeParsingTests ++ RCodeUparsingTests ++
+        OpCodeParsingTests ++ OpCodeUparsingTests ++
         DomainParsingTests ++ DomainUnparsingTests ++
         QuestionsParsingTests. %%, QuestionsUnparsingTests.
 
@@ -535,6 +549,29 @@ rcode_unparsing_tests([{Type, Parsed, Raw}|RCodes]) ->
                 correct -> ?_assert(RawToTest == {raw_rcode, Raw});
                 error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
             end} | rcode_unparsing_tests(RCodes)].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% OpCode Parsing and Unparsing testing %%%%%%
+
+opcode_parsing_tests([]) -> [];
+opcode_parsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
+    ParsedToTest = parse_opcode(Raw), % Perform the parsing.
+    Desc = lists:flatten(            % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == {opcode, Parsed});
+                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+            end} | opcode_parsing_tests(OpCodes)].
+
+opcode_unparsing_tests([]) -> [];
+opcode_unparsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
+    RawToTest = unparse_opcode(Parsed), % Perform the parsing.
+    Desc = lists:flatten(                % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_opcode, Raw});
+                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+            end} | opcode_unparsing_tests(OpCodes)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Domain Parsing and Unparsing testing %%%%%%
