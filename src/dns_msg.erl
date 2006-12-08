@@ -375,9 +375,16 @@ unparse_rcode(_) ->               {error, invalid}.
 %% @doc Parse boolean values.
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_bool(0) -> false;
-parse_bool(1) -> true.
+parse_bool(0) -> {bool, false};
+parse_bool(1) -> {bool, true};
+parse_bool(_) -> {error, invalid}.
 
+%% @doc Unparse boolean values.
+%% @private Internal helper function.
+%% @since 0.2.0
+unparse_bool(false) -> {raw_bool, 0};
+unparse_bool(true) ->  {raw_bool, 1};
+unparse_bool(_) ->     {error, invalid}.
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
@@ -435,10 +442,6 @@ parse_bool(1) -> true.
  		  {correct, iquery, <<1:4>>},
  		  {correct, status, <<2:4>>}]).
 
-%% DNS Booleans to test the parser.
--define(BOOLEANS, [{correct, false, <<0:1>>},
- 		   {correct, true,  <<1:1>>}]).
-
 %% DNS RCodes to test the parser.
 -define(RCODES, [{correct, no_error,        0},
  		 {correct, format_error,    1},
@@ -448,11 +451,19 @@ parse_bool(1) -> true.
  		 {correct, refused,         5},
                  {error,   whatever,       10}]).
 
+%% DNS Booleans to test the parser.
+-define(BOOLEANS, [{correct, false, 0},
+ 		   {correct, true,  1},
+                   {error, whatever, 10}]).
+
 %% @doc Generates and run all tests.
 %% @since 0.2.0
 all_test_() ->
-    Factor = 3,
-    Sample = 20,
+    Factor = 4,
+    Sample = 40,
+
+    BoolParsingTests = bool_parsing_tests(?BOOLEANS),
+    BoolUnparsingTests = bool_unparsing_tests(?BOOLEANS),
 
     RCodeParsingTests = rcode_parsing_tests(?RCODES),
     RCodeUparsingTests = rcode_unparsing_tests(?RCODES),
@@ -474,9 +485,33 @@ all_test_() ->
     %% TODO: make these tests dynamic as the previous ones.
 %%    MessageParsingTests = tests_message_parsing(),
 
-    RCodeParsingTests ++ RCodeUparsingTests ++
+    BoolParsingTests ++ BoolUnparsingTests ++
+        RCodeParsingTests ++ RCodeUparsingTests ++
         DomainParsingTests ++ DomainUnparsingTests ++
         QuestionsParsingTests. %%, QuestionsUnparsingTests.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% Bool Parsing and Unparsing testing %%%%%%
+
+bool_parsing_tests([]) -> [];
+bool_parsing_tests([{Type, Parsed, Raw}|Bools]) ->
+    ParsedToTest = parse_bool(Raw),  % Perform the parsing.
+    Desc = lists:flatten(            % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == {bool, Parsed});
+                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+            end} | bool_parsing_tests(Bools)].
+
+bool_unparsing_tests([]) -> [];
+bool_unparsing_tests([{Type, Parsed, Raw}|Bools]) ->
+    RawToTest = unparse_bool(Parsed), % Perform the parsing.
+    Desc = lists:flatten(                % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_bool, Raw});
+                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+            end} | bool_unparsing_tests(Bools)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% RCode Parsing and Unparsing testing %%%%%%
