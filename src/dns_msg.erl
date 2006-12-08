@@ -337,11 +337,19 @@ parse_qclass(Class) -> parse_class(Class).
 unparse_qclass(any) -> <<255:16>>;
 unparse_qclass(Class) -> unparse_class(Class).
 
-%% @doc Turn a numeric DNS QR into an atom.
+%% @doc Parse a DNS qr.
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_qr(0) -> query_;
-parse_qr(1) -> response.
+parse_qr(0) -> {qr, query_};
+parse_qr(1) -> {qr, response};
+parse_qr(_) -> {error, invalid}.
+
+%% @doc Parse a DNS qr.
+%% @private Internal helper function.
+%% @since 0.2.0
+unparse_qr(query_)   -> {raw_qr, 0};
+unparse_qr(response) -> {raw_qr, 1};
+unparse_qr(_) ->        {error, invalid}.
 
 %% @doc Parse an opcode.
 %% @private Internal helper function.
@@ -443,8 +451,9 @@ unparse_bool(_) ->     {error, invalid}.
 -define(QCLASSES, [{correct, any, <<255:16>>}] ++ ?CLASSES).
 
 %% DNS QRs to test the parser.
--define(QRS, [{correct, query_,   <<0:1>>},
- 	      {correct, response, <<1:1>>}]).
+-define(QRS, [{correct, query_,   0},
+ 	      {correct, response, 1},
+              {error,   err,      2}]).
 
 %% DNS OpCodes to test the parser.
 -define(OPCODES, [{correct, query_, 0},
@@ -481,6 +490,9 @@ all_test_() ->
     OpCodeParsingTests = opcode_parsing_tests(?OPCODES),
     OpCodeUparsingTests = opcode_unparsing_tests(?OPCODES),
 
+    QrParsingTests = qr_parsing_tests(?QRS),
+    QrUparsingTests = qr_unparsing_tests(?QRS),
+
     Domains = build_domains(?LABELS, Factor, Sample), %% Build the domains and take a sample of it.
     DomainParsingTests = domain_parsing_tests(Domains),
     DomainUnparsingTests = domain_unparsing_tests(Domains),
@@ -501,6 +513,7 @@ all_test_() ->
     BoolParsingTests ++ BoolUnparsingTests ++
         RCodeParsingTests ++ RCodeUparsingTests ++
         OpCodeParsingTests ++ OpCodeUparsingTests ++
+        QrParsingTests ++ QrUparsingTests ++
         DomainParsingTests ++ DomainUnparsingTests ++
         QuestionsParsingTests. %%, QuestionsUnparsingTests.
 
@@ -572,6 +585,29 @@ opcode_unparsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
                 correct -> ?_assert(RawToTest == {raw_opcode, Raw});
                 error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
             end} | opcode_unparsing_tests(OpCodes)].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% Qr Parsing and Unparsing testing %%%%%%
+
+qr_parsing_tests([]) -> [];
+qr_parsing_tests([{Type, Parsed, Raw}|Qrs]) ->
+    ParsedToTest = parse_qr(Raw), % Perform the parsing.
+    Desc = lists:flatten(            % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == {qr, Parsed});
+                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+            end} | qr_parsing_tests(Qrs)].
+
+qr_unparsing_tests([]) -> [];
+qr_unparsing_tests([{Type, Parsed, Raw}|Qrs]) ->
+    RawToTest = unparse_qr(Parsed), % Perform the parsing.
+    Desc = lists:flatten(                % Some useful description.
+             io_lib:format("~p, ~p, ~p, ~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_qr, Raw});
+                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+            end} | qr_unparsing_tests(Qrs)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Domain Parsing and Unparsing testing %%%%%%
