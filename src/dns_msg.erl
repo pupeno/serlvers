@@ -403,6 +403,21 @@ unparse_bool(false) -> {raw_bool, 0};
 unparse_bool(true) ->  {raw_bool, 1};
 unparse_bool(_) ->     {error, invalid}.
 
+%% @doc true if the argument is an error, non-true otherwise (false).
+%% @private Internal helper function.
+%% @since 0.2.0
+is_error({error, _}) -> true;
+is_error(_) -> false.
+
+%% @doc If there's no error in the Results, then it renturns {no_error, Results}. If there's at least one error, it'll combine all errors into {error, Reasons} where Reasons is a list of all the reasons of each present error.
+%% @private Internal helper function.
+%% @since 0.2.0
+any_error(Results) ->
+    Errors = lists:filter(fun is_error/1, Results),
+    if length(Errors) == 0 -> {no_error, Results};
+       true -> {error, lists:map(fun({error, Reason}) -> Reason end, Errors)}
+    end.
+
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -966,4 +981,15 @@ noise(Max) ->
     [random:uniform(256) - 1 |
      noise(Max - 1)].
 
+is_error_test_() ->
+    [?_assert(is_error({error, invalid}) == true),
+     ?_assert(is_error({error, whatever}) == true),
+     ?_assert(is_error(whatever) /= true)].
+
+any_error_test_() ->
+    A = {type_a, value_a},
+    B = {type_b, value_b},
+    [?_assert(any_error([A, B]) == {no_error, [A, B]}),
+     ?_assert(any_error([A, {error, invalid}]) == {error, [invalid]}),
+     ?_assert(any_error([{error, invalid}, {error, whatever}]) == {error, [invalid, whatever]})].
 -endif. %% ifdef(TEST).
