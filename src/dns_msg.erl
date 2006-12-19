@@ -527,9 +527,8 @@ all_test_() ->
     %% TODO: make these tests dynamic as the previous ones.
 %%    MessageParsingTests = tests_message_parsing(),
 
-    %%DomainParsingTests ++ DomainUnparsingTests ++
-    %%QuestionsParsingTests. %%, QuestionsUnparsingTests.
-    [].
+    DomainParsingTests ++ DomainUnparsingTests ++
+        QuestionsParsingTests. %%, QuestionsUnparsingTests.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Domain Parsing and Unparsing testing %%%%%%
@@ -550,7 +549,7 @@ domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
                 correct ->
                     ?_assert(ParsedToTest == CParsed);
                 error   ->
-                    ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
+                    ?_assert((is_error(ParsedToTest)) or % We should get an error
                              (ParsedToTest /= CParsed))            % or plain wrong data (not an exception).
             end} | domain_parsing_tests(Domains)].
 
@@ -570,7 +569,7 @@ domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
                 correct ->
                     ?_assert(RawToTest == CRaw);
                 error   ->
-                    ?_assert((RawToTest == {error, invalid}) or % We should get an error
+                    ?_assert((is_error(RawToTest)) or % We should get an error
                              (RawToTest /= CRaw))               % or plain wrong data (not an exception).
             end} | domain_unparsing_tests(Domains)].
 
@@ -632,8 +631,8 @@ questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
     [{Desc, case Type of
                 correct ->
                     ?_assert(ParsedToTest == CParsed);
-                error   ->
-                    ?_assert((ParsedToTest == {error, invalid}) or % We should get an error
+                error ->
+                    ?_assert((is_error(ParsedToTest)) or % We should get an error
                              (ParsedToTest /= CParsed))            % or plain wrong data (not an exception).
             end} | questions_parsing_tests(Questions)].
 
@@ -653,7 +652,7 @@ questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
                 correct ->
                     ?_assert(RawToTest == CRaw);
                 error   ->
-                    ?_assert((RawToTest == {error, invalid}) or % We should get an error
+                    ?_assert((is_error(RawToTest)) or % We should get an error
                              (RawToTest /= CRaw))               % or plain wrong data (not an exception).
             end} | questions_unparsing_tests(Questions)].
 
@@ -662,7 +661,7 @@ questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
 %% @since 0.2.0
 build_questions(Domains, QTypes, QClasses, Length, Sample) ->
     Questions = n_of(Sample, build_questions(Domains, QTypes, QClasses, Sample)),
-    BuildQuestions = fun(N, NewQuestions) ->                           % Function to build questions of N length and append it to NewQuestions.
+    BuildQuestions = fun(N, NewQuestions) -> % Function to build questions of N length and append it to NewQuestions.
                              NewQuestions ++ build_questions(Questions, N, Sample)
                      end,
     n_of(Sample, lists:foldl(BuildQuestions, [], lists:seq(1, Length))).
@@ -673,23 +672,27 @@ build_questions(Domains, QTypes, QClasses, Length, Sample) ->
 build_questions([], _QTypes, _QClasses, _Sample) -> [];
 build_questions(_Domains, [], _QClasses, _Sample) -> [];
 build_questions(_Domains, _QTypes, [], _Sample) -> [];
-build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, {QCType, QCParsed, QCRaw}, _Sample) ->
-    Type = if (DType == correct) and (QTType == correct) and (QCType == correct) -> correct;
+build_questions({DomainType, DomainParsed, DomainRaw},
+                {QTypeType,  QTypeParsed,  QTypeRaw},
+                {QClassType, QClassParsed, QClassRaw}, _Sample) ->
+    Type = if (DomainType == correct) and (QTypeType == correct) and (QClassType == correct) -> correct;
               true -> error
            end,
     {Type, 1,
-     [#question{qname = DParsed, qtype = QTParsed, qclass = QCParsed}],
-     <<DRaw/binary, QTRaw/binary, QCRaw/binary>>};
-build_questions({DType, DParsed, DRaw}, {QTType, QTParsed, QTRaw}, QClasses, Sample) ->
+     [#question{qname = DomainParsed, qtype = QTypeParsed, qclass = QClassParsed}],
+     <<DomainRaw/binary, QTypeRaw/binary, QClassRaw/binary>>};
+build_questions({DomainType, DomainParsed, DomainRaw},
+                {QTypeType,  QTypeParsed,  QTypeRaw},
+                QClasses, Sample) ->
     BuildQuestion = fun(QClass) ->
-                            Sample, build_questions({DType, DParsed, DRaw},
-                                                    {QTType, QTParsed, QTRaw},
+                            Sample, build_questions({DomainType, DomainParsed, DomainRaw},
+                                                    {QTypeType, QTypeParsed, QTypeRaw},
                                                     QClass, Sample)
                     end,
     n_of(Sample, lists:flatten(lists:map(BuildQuestion, QClasses)));
-build_questions({DType, DParsed, DRaw}, QTypes, QClasses, Sample) ->
+build_questions({DomainType, DomainParsed, DomainRaw}, QTypes, QClasses, Sample) ->
     BuildQuestion = fun(QType) ->
-                            n_of(Sample, build_questions({DType, DParsed, DRaw},
+                            n_of(Sample, build_questions({DomainType, DomainParsed, DomainRaw},
                                                          QType, QClasses, Sample))
                     end,
     lists:flatten(lists:map(BuildQuestion, QTypes));
@@ -745,7 +748,7 @@ one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%% DNS Message Parsing testing %%%%%%%%%%%
 
-%% %% @doc . 
+%% %% @doc .
 %% %% @private Internal helper function.
 %% %% @since 0.2.0
 %% %%build_messages(_Questions, _RRs) ->
@@ -787,7 +790,7 @@ qr_parsing_tests([{Type, Parsed, Raw}|Qrs]) ->
              io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == {qr, Parsed});
-                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
             end} | qr_parsing_tests(Qrs)].
 
 qr_unparsing_test_() -> qr_unparsing_tests(?QRS).
@@ -798,7 +801,7 @@ qr_unparsing_tests([{Type, Parsed, Raw}|Qrs]) ->
              io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, RawToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(RawToTest == {raw_qr, Raw});
-                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
             end} | qr_unparsing_tests(Qrs)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -812,7 +815,7 @@ opcode_parsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
              io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == {opcode, Parsed});
-                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
             end} | opcode_parsing_tests(OpCodes)].
 
 opcode_unparsing_test_() -> opcode_unparsing_tests(?OPCODES).
@@ -823,7 +826,7 @@ opcode_unparsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
              io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, RawToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(RawToTest == {raw_opcode, Raw});
-                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
             end} | opcode_unparsing_tests(OpCodes)].
 
 
@@ -838,7 +841,7 @@ rcode_parsing_tests([{Type, Parsed, Raw}|RCodes]) ->
              io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == {rcode, Parsed});
-                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
             end} | rcode_parsing_tests(RCodes)].
 
 rcode_unparsing_test_() -> rcode_unparsing_tests(?RCODES).
@@ -849,7 +852,7 @@ rcode_unparsing_tests([{Type, Parsed, Raw}|RCodes]) ->
              io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, RawToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(RawToTest == {raw_rcode, Raw});
-                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
             end} | rcode_unparsing_tests(RCodes)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -863,7 +866,7 @@ bool_parsing_tests([{Type, Parsed, Raw}|Bools]) ->
              io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == {bool, Parsed});
-                error   -> ?_assert(ParsedToTest == {error, invalid}) % We should get an error.
+                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
             end} | bool_parsing_tests(Bools)].
 
 bool_unparsing_test_() -> bool_unparsing_tests(?BOOLEANS).
@@ -874,7 +877,7 @@ bool_unparsing_tests([{Type, Parsed, Raw}|Bools]) ->
              io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, RawToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(RawToTest == {raw_bool, Raw});
-                error   -> ?_assert(RawToTest == {error, invalid}) % We should get an error.
+                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
             end} | bool_unparsing_tests(Bools)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -883,12 +886,13 @@ bool_unparsing_tests([{Type, Parsed, Raw}|Bools]) ->
 is_error_test_() ->
     [?_assert(is_error({error, invalid}) == true),
      ?_assert(is_error({error, whatever}) == true),
+     ?_assert(is_error({error, [invalid, whatever]}) == true),
      ?_assert(is_error(whatever) /= true)].
 
 any_error_test_() ->
     A = {type_a, value_a},
     B = {type_b, value_b},
-    [?_assert(any_error([A, B]) == {no_error, [A, B]}),
+    [?_assert(any_error([A, B]) == no_error),
      ?_assert(any_error([A, {error, invalid}]) == {error, [invalid]}),
      ?_assert(any_error([{error, invalid}, {error, whatever}]) == {error, [invalid, whatever]})].
 
