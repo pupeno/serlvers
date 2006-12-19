@@ -88,17 +88,21 @@ parse_questions(0, Rest, Questions) -> {questions, lists:reverse(Questions), Res
 parse_questions(Count, RawBody, Questions) ->
     %% To parse a question, first parse the domain. T
     case parse_domain(RawBody) of
-        {domain, QNAME, <<RawQTYPE:16, RawQCLASS:16, Rest/binary>>} ->
-            case parse_qtype(RawQTYPE) of
-                {qtype, QTYPE} ->
+        {domain, QName, <<RawQType:2/binary-unit:8, RawQClass:2/binary-unit:8, Rest/binary>>} ->
+            %% TODO: can't we just parse all and match agains {type, value} inside a try and on pattern missmatch return an {error, invalid} ?
+            QType = parse_qtype(RawQType),
+            QClass = parse_qclass(RawQClass),
+            case any_error([QType, QClass]) of
+                no_error ->
+                    {qtype, BareQType} = QType,
+                    {qclass, BareQClass} = QClass,
                     parse_questions(Count - 1, Rest,
-                                    [#question{qname = QNAME, qtype = QTYPE, qclass = parse_qclass(RawQCLASS)}|
+                                    [#question{qname = QName, qtype = BareQType, qclass = BareQClass}|
                                      Questions]);
-                {error, invalid} ->
-                    {error, invalid}
+                {error, Reasons} ->
+                    {error, Reasons}
             end;
-        {error, invalid} ->
-            {error, invalid}
+        {error, Reason} -> {error, Reason}
     end.
 
 
@@ -198,7 +202,7 @@ unparse_rdata(a,     _RawRData) -> <<>>;
 unparse_rdata(ns,    _RawRData) -> <<>>;
 unparse_rdata(md,    _RawRData) -> <<>>;
 unparse_rdata(mf,    _RawRData) -> <<>>;
-unparse_rdata(cname, RawRData) -> 
+unparse_rdata(cname, RawRData) ->
     {raw_domain, RawDomain, _Rest} = unparse_domain(RawRData),
     {rdata, RawDomain};
 unparse_rdata(soa,   _RawRData) -> <<>>;
@@ -228,12 +232,12 @@ parse_domain(_Labels, _Body) ->
 %% @doc Unparse a DNS domain.
 %% @private Internal helper function.
 %% @since 0.2.0
-unparse_domain({domain, Domain, Rest}) ->
+unparse_domain({domain, Domain, Rest}) ->            %% TODO: Is this instance really needed ?
     {raw_domain, RawDomain} = unparse_domain(Domain),
     {raw_domain, <<RawDomain/binary, Rest/binary>>};
 unparse_domain(Domain) -> {raw_domain, unparse_domain(<<>>, Domain)}.
 
-unparse_domain(RawDomain, []) -> <<RawDomain/binary, 0:8>>;
+unparse_domain(RawDomain, []) -> <<RawDomain/binary, 0:8>>;  %% TODO: wouldn't it make sense to swap the arguments here ?
 unparse_domain(RawDomain, [Label|Labels]) ->
     LabelLength = length(Label),
     BinaryLabel = list_to_binary(Label),
@@ -242,23 +246,23 @@ unparse_domain(RawDomain, [Label|Labels]) ->
 %% @doc Turn a numeric DNS type into an atom.
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_type(1)  -> {type, a};
-parse_type(2)  -> {type, ns};
-parse_type(3)  -> {type, md};
-parse_type(4)  -> {type, mf};
-parse_type(5)  -> {type, cname};
-parse_type(6)  -> {type, soa};
-parse_type(7)  -> {type, mb};
-parse_type(8)  -> {type, mg};
-parse_type(9)  -> {type, mr};
-parse_type(10) -> {type, null};
-parse_type(11) -> {type, wks};
-parse_type(12) -> {type, ptr};
-parse_type(13) -> {type, hinfo};
-parse_type(14) -> {type, minfo};
-parse_type(15) -> {type, mx};
-parse_type(16) -> {type, txt};
-parse_type(_) ->  {error, invalid}.
+parse_type(<< 1:16>>) -> {type, a};
+parse_type(<< 2:16>>) -> {type, ns};
+parse_type(<< 3:16>>) -> {type, md};
+parse_type(<< 4:16>>) -> {type, mf};
+parse_type(<< 5:16>>) -> {type, cname};
+parse_type(<< 6:16>>) -> {type, soa};
+parse_type(<< 7:16>>) -> {type, mb};
+parse_type(<< 8:16>>) -> {type, mg};
+parse_type(<< 9:16>>) -> {type, mr};
+parse_type(<<10:16>>) -> {type, null};
+parse_type(<<11:16>>) -> {type, wks};
+parse_type(<<12:16>>) -> {type, ptr};
+parse_type(<<13:16>>) -> {type, hinfo};
+parse_type(<<14:16>>) -> {type, minfo};
+parse_type(<<15:16>>) -> {type, mx};
+parse_type(<<16:16>>) -> {type, txt};
+parse_type(_) ->         {error, invalid}.
 
 %% @doc Unparse a DNS type.
 %% @private Internal helper function.
@@ -284,14 +288,14 @@ unparse_type(_) ->     {error, invalid}.
 %% @doc Turn a numeric DNS qtype into an atom.
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_qtype(252) -> {qtype, axfr};
-parse_qtype(253) -> {qtype, mailb};
-parse_qtype(254) -> {qtype, maila};
-parse_qtype(255) -> {qtype, all};
+parse_qtype(<<252:16>>) -> {qtype, axfr};
+parse_qtype(<<253:16>>) -> {qtype, mailb};
+parse_qtype(<<254:16>>) -> {qtype, maila};
+parse_qtype(<<255:16>>) -> {qtype, all};
 parse_qtype(RawQType) ->
     case parse_type(RawQType) of
         {type, QType} -> {qtype, QType};
-        {error, invalid} -> {error, invalid}
+        {error, Reason} -> {error, Reason}
     end.
 
 %% @doc Unparse a DNS qtype.
@@ -304,38 +308,46 @@ unparse_qtype(all) ->   {raw_qtype, <<255:16>>};
 unparse_qtype(QType) ->
     case unparse_type(QType) of
         {raw_type, RawQType} -> {raw_qtype, RawQType};
-        {error, invalid} -> {error, invalid}
+        {error, Reason} -> {error, Reason}
     end.
 
 %% @doc Turn a numeric DNS class into an atom.
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_class(1) -> in;
-parse_class(2) -> cs;
-parse_class(3) -> ch;
-parse_class(4) -> hs;
-parse_class(_) -> {error, invalid}.
+parse_class(<<1:16>>) -> {class, in};
+parse_class(<<2:16>>) -> {class, cs};
+parse_class(<<3:16>>) -> {class, ch};
+parse_class(<<4:16>>) -> {class, hs};
+parse_class(_) ->        {error, invalid}.
 
 %% @doc Unparse a DNS class.
 %% @private Internal helper function.
 %% @since 0.2.0
-unparse_class(in) -> <<1:16>>;
-unparse_class(cs) -> <<2:16>>;
-unparse_class(ch) -> <<3:16>>;
-unparse_class(hs) -> <<4:16>>;
+unparse_class(in) -> {raw_class, <<1:16>>};
+unparse_class(cs) -> {raw_class, <<2:16>>};
+unparse_class(ch) -> {raw_class, <<3:16>>};
+unparse_class(hs) -> {raw_class, <<4:16>>};
 unparse_class(_)  -> {error, invalid}.
 
 %% @doc Turn a numeric DNS qclass into an atom.
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_qclass(255) -> any;
-parse_qclass(Class) -> parse_class(Class).
+parse_qclass(<<255:16>>) -> {qclass, any};
+parse_qclass(RawClass) ->
+    case parse_class(RawClass) of
+        {class, Class} -> {qclass, Class};
+        {error, Reason} -> {error, Reason}
+    end.
 
 %% @doc Unparse a DNS qclass.
 %% @private Internal helper function.
 %% @since 0.2.0
-unparse_qclass(any) -> <<255:16>>;
-unparse_qclass(Class) -> unparse_class(Class).
+unparse_qclass(any) -> {raw_qclass, <<255:16>>};
+unparse_qclass(Class) ->
+    case unparse_class(Class) of
+        {raw_class, RawClass} -> {raw_qclass, RawClass};
+        {error, Reason} -> {error, Reason}
+    end.
 
 %% @doc Parse a DNS qr.
 %% @private Internal helper function.
@@ -414,7 +426,7 @@ is_error(_) -> false.
 %% @since 0.2.0
 any_error(Results) ->
     Errors = lists:filter(fun is_error/1, Results),
-    if length(Errors) == 0 -> {no_error, Results};
+    if length(Errors) == 0 -> no_error;
        true -> {error, lists:map(fun({error, Reason}) -> Reason end, Errors)}
     end.
 
