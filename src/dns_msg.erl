@@ -472,10 +472,12 @@ any_error(Results) ->
 -define(CLASSES, [{correct, in, <<1:16>>},
  		  {correct, cs, <<2:16>>},
  		  {correct, ch, <<3:16>>},
-  		  {correct, hs, <<4:16>>}]).
+  		  {correct, hs, <<4:16>>},
+                  {error,   wh, <<9:16>>}]).
 
 %% DNS QClasses to test the parser.
--define(QCLASSES, [{correct, any, <<255:16>>}] ++ ?CLASSES).
+-define(QCLASSES, [{correct, any, <<255:16>>},
+                   {error,   err, <<254:16>>}] ++ ?CLASSES).
 
 %% DNS QRs to test the parser.
 -define(QRS, [{correct, query_,   0},
@@ -749,7 +751,32 @@ one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
 %% %%build_messages(_Questions, _RRs) ->
 %% %%  [].
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% QClass Parsing and Unparsing testing %%%%%%
+
+qclass_parsing_test_() -> qclass_parsing_tests(?QCLASSES).
+qclass_parsing_tests([]) -> [];
+qclass_parsing_tests([{Type, Parsed, Raw}|QClasses]) ->
+    ParsedToTest = parse_qclass(Raw), % Perform the parsing.
+    Desc = lists:flatten(             % Some useful description.
+             io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == {qclass, Parsed});
+                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+            end} | qclass_parsing_tests(QClasses)].
+
+qclass_unparsing_test_() -> qclass_unparsing_tests(?QCLASSES).
+qclass_unparsing_tests([]) -> [];
+qclass_unparsing_tests([{Type, Parsed, Raw}|QClasses]) ->
+    RawToTest = unparse_qclass(Parsed), % Perform the parsing.
+    Desc = lists:flatten(               % Some useful description.
+             io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_qclass, Raw});
+                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+            end} | qclass_unparsing_tests(QClasses)].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Qr Parsing and Unparsing testing %%%%%%
 
 qr_parsing_test_() -> qr_parsing_tests(?QRS).
