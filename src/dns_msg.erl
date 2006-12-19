@@ -829,7 +829,6 @@ opcode_unparsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
                 error   -> ?_assert(is_error(RawToTest)) % We should get an error.
             end} | opcode_unparsing_tests(OpCodes)].
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% RCode Parsing and Unparsing testing %%%%%%
 
