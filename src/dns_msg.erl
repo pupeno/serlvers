@@ -460,10 +460,12 @@ any_error(Results) ->
  		{correct, hinfo, <<13:16>>},
  		{correct, minfo, <<14:16>>},
  		{correct, mx,    <<15:16>>},
-  		{correct, txt,   <<16:16>>}]).
+  		{correct, txt,   <<16:16>>},
+                {error,   err,   <<17:16>>}]).
 
 %% DNS QTypes to test the parser.
--define(QTYPES, [{correct, axfr,  <<252:16>>},
+-define(QTYPES, [{error,   err,   <<128:16>>},
+                 {correct, axfr,  <<252:16>>},
  		 {correct, mailb, <<253:16>>},
  		 {correct, maila, <<254:16>>},
   		 {correct, all,   <<255:16>>}] ++ ?TYPES).
@@ -753,6 +755,56 @@ one_question_per_questions({Type, Count, Parsed, Raw}, Questions) ->
 %% %% @since 0.2.0
 %% %%build_messages(_Questions, _RRs) ->
 %% %%  [].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% Type Parsing and Unparsing testing %%%%%%
+
+type_parsing_test_() -> type_parsing_tests(?TYPES).
+type_parsing_tests([]) -> [];
+type_parsing_tests([{Type, Parsed, Raw}|Types]) ->
+    ParsedToTest = parse_type(Raw), % Perform the parsing.
+    Desc = lists:flatten(             % Some useful description.
+             io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == {type, Parsed});
+                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+            end} | type_parsing_tests(Types)].
+
+type_unparsing_test_() -> type_unparsing_tests(?TYPES).
+type_unparsing_tests([]) -> [];
+type_unparsing_tests([{Type, Parsed, Raw}|Types]) ->
+    RawToTest = unparse_type(Parsed), % Perform the parsing.
+    Desc = lists:flatten(               % Some useful description.
+             io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_type, Raw});
+                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+            end} | type_unparsing_tests(Types)].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% QType Parsing and Unparsing testing %%%%%%
+
+qtype_parsing_test_() -> qtype_parsing_tests(?QTYPES).
+qtype_parsing_tests([]) -> [];
+qtype_parsing_tests([{Type, Parsed, Raw}|QTypes]) ->
+    ParsedToTest = parse_qtype(Raw), % Perform the parsing.
+    Desc = lists:flatten(             % Some useful description.
+             io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, ParsedToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(ParsedToTest == {qtype, Parsed});
+                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+            end} | qtype_parsing_tests(QTypes)].
+
+qtype_unparsing_test_() -> qtype_unparsing_tests(?QTYPES).
+qtype_unparsing_tests([]) -> [];
+qtype_unparsing_tests([{Type, Parsed, Raw}|QTypes]) ->
+    RawToTest = unparse_qtype(Parsed), % Perform the parsing.
+    Desc = lists:flatten(               % Some useful description.
+             io_lib:format("~p,~n~p,~n~p,~n~p", [Type, Parsed, Raw, RawToTest])),
+    [{Desc, case Type of                                                % What kind of test is it ?
+                correct -> ?_assert(RawToTest == {raw_qtype, Raw});
+                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+            end} | qtype_unparsing_tests(QTypes)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Class Parsing and Unparsing testing %%%%%%
