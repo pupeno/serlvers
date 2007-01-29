@@ -38,11 +38,12 @@
 (^|/)doc/edoc-info
 (^|/)doc/.*\.html
 (^|/)doc/.*\.css
+\.dump$
 
 ^\.directory$
 
-(^|/)\.sconsign$
-^\.Serlvers.conf$
+(^|/)\.sconsign.dblite$
+(^|/)options.cache$
 
 ^aclocal.m4$
 ^autom4te.cache
