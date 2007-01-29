@@ -571,17 +571,17 @@ questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
 questions_unparsing_tests([]) -> [];
 questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
     Noise = list_to_binary(noise()),
-    CRaw = <<Raw/binary, Noise/binary>>,            % Complete raw, add noise.
-    CParsed = {questions, Parsed, Noise},           % Complete parsed, add signature and noise.
-    RawToTest = (catch unparse_questions(CParsed)), % Perform the unparsing.
-    Desc = lists:flatten(                           % Some useful description
+    CRaw = <<Raw/binary, Noise/binary>>,              % Complete raw, add noise.
+    CParsed = {questions, Parsed, Noise},             % Complete parsed, add signature and noise.
+    RawToTest = (catch unparse_questions(CParsed)),   % Perform the unparsing.
+    Desc = lists:flatten(                             % Some useful description
              io_lib:format("~p,~n~p,~n~p,~n~p", [Type, CParsed, CRaw, RawToTest])),
-    [{Desc, case Type of                                        % What kind of test is it ?
+    [{Desc, case Type of                              % What kind of test is it ?
                 correct ->
                     ?_assert(RawToTest == CRaw);
                 error   ->
                     ?_assert((is_error(RawToTest)) or % We should get an error
-                             (RawToTest /= CRaw))               % or plain wrong data (not an exception).
+                             (RawToTest /= CRaw))     % or plain wrong data (not an exception).
             end} | questions_unparsing_tests(Questions)].
 
 %% @doc Using domains Domains, QTypes and QClasses build all possible questions up to length Length (that is, chained questions). 
