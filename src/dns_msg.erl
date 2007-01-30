@@ -116,13 +116,21 @@ unparse_questions(Questions) -> unparse_questions(<<>>, Questions).
 
 unparse_questions(RawQuestions, []) -> RawQuestions;
 unparse_questions(RawQuestions, [#question{qname=QName, qtype=QType, qclass=QClass}|Questions]) ->
-    {unparse_domain, RawQName} = unparse_domain(QName),
+    RawQName = unparse_domain(QName),
     RawQType = unparse_qtype(QType),
     RawQClass = unparse_qclass(QClass),
-    unparse_questions(<<RawQuestions/binary,
-                       RawQName/binary,
-                       RawQType/binary,
-                       RawQClass/binary>>, Questions).
+    case any_error([RawQName, RawQType, RawQClass]) of
+        no_error ->
+            {raw_domain, BareRawQName} = RawQName,
+            {raw_qtype, BareRawQType} = RawQType,
+            {raw_qclass, BareRawQClass} = RawQClass,
+            unparse_questions(<<RawQuestions/binary,
+                               BareRawQName/binary,
+                               BareRawQType/binary,
+                               BareRawQClass/binary>>, Questions);
+        {error, Reasons} ->
+            {error, Reasons}
+    end.
 
 %% @doc Parse the resource records.
 %% @private Internal helper function.
@@ -143,11 +151,26 @@ parse_resource_records(Count, Body, RRs) ->
       RDLength:16, RawRData:RDLength/binary, Rest/binary>>} = parse_domain(Body),
     Type = parse_type(RawType),
     Class = parse_class(RawClass),
-    {rdata, RData} = parse_rdata(Type, RawRData),
-    parse_resource_records(Count - 1, Rest,
-                           [#resource_record{name = Name, type = Type,
-                                             class = Class, ttl = TTL,
-                                             rdata = RData}            | RRs]).
+    case any_error([Type, Class]) of
+        no_error ->
+            {type, BareType} = Type,
+            {class, BareClass} = Class,
+            RData = parse_rdata(Type, RawRData),
+            case any_error(RData) of
+                no_error ->
+                    {rdata, BareRData} = RData,
+                    parse_resource_records(Count - 1, Rest,
+                                           [#resource_record{name = Name, type = BareType,
+                                                             class = BareClass, ttl = TTL,
+                                                             rdata = BareRData}            | RRs]);
+                
+                {error, Reasons} ->
+                    {error, Reasons}
+            end;
+        {error, Reasons} ->
+            {error, Reasons}
+    end.
+
 
 %% @doc Unparse resource records.
 %% @private Internal helper function.
@@ -518,7 +541,7 @@ all_test_() ->
 
     Questions = build_questions(Domains, ?QTYPES, ?QCLASSES, Factor, Sample),
     QuestionsParsingTests = questions_parsing_tests(Questions),
-    %%QuestionsUnparsingTests = questions_unparsing_tests(Questions),
+    QuestionsUnparsingTests = questions_unparsing_tests(Questions),
 
     %% TODO: make these tests dynamic as the previous ones.
     %%Types = n_of(Sample, ?TYPES),
@@ -530,7 +553,7 @@ all_test_() ->
 %%    MessageParsingTests = tests_message_parsing(),
 
     DomainParsingTests ++ DomainUnparsingTests ++
-        QuestionsParsingTests. %%, QuestionsUnparsingTests.
+        QuestionsParsingTests.%%, QuestionsUnparsingTests.
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%% DNS Message Parsing testing %%%%%%%%%%%
