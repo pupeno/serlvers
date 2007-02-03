@@ -22,12 +22,12 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
--define(ERRORCATCHING(NAME, BODY),
+-define(INVALIDCATCH(NAME, BODY),
         try BODY
         catch
             error:{badmatch, Value} ->
                 case Value of
-                    {error, Reason} -> {error, [NAME|Reason]};
+                    {ivalid, Reason} -> {invalid, [NAME|Reason]};
                     _ -> {error, {unexpected_error, Value}}
                 end
         end).
@@ -69,8 +69,8 @@
 %% @since 0.2.0
 parse_message(RawMsg) ->
     %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
-    ?ERRORCATCHING(
-       invalid_raw_message,
+    ?INVALIDCATCH(
+       raw_message,
        begin
            %% Separate header (in each of it fields) and body.
            <<ID:16, QR:1, OpCode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
@@ -91,7 +91,7 @@ parse_message(RawMsg) ->
 
 %% @doc Parse the query section of a DNS message.
 %%      Returns {questions, Questions, Rest} where Question is the list of parsed questions and Rest is the rest of the binary message that was not parsed.
-%% @spec parse_questions(integer(), binary()) -> {questions, Questions, Rest} | {error, invalid}
+%% @spec parse_questions(integer(), binary()) -> {questions, Questions, Rest} | {invalid, Reason}
 %% @private Internal helper function.
 %% @since 0.2.0
 parse_questions(Count, RawBody) -> parse_questions(Count, RawBody, []).
@@ -99,8 +99,8 @@ parse_questions(Count, RawBody) -> parse_questions(Count, RawBody, []).
 parse_questions(0, Rest, Questions) -> {questions, lists:reverse(Questions), Rest};
 parse_questions(Count, RawBody, Questions) ->
     %%io:fwrite("~w:parse_questions(~p, ~p, ~p)~n", [?MODULE, Count, RawBody, Questions]),
-    ?ERRORCATCHING(
-       invalid_raw_question,
+    ?INVALIDCATCH(
+       raw_question,
        begin
            %% To parse a question, first parse the domain.
            {domain, QName, <<RawQType:2/binary-unit:8, RawQClass:2/binary-unit:8, Rest/binary>>} = parse_domain(RawBody),
@@ -114,8 +114,8 @@ parse_questions(Count, RawBody, Questions) ->
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_questions({questions, Questions, Rest}) ->
-    ?ERRORCATCHING(
-       invalid_question,
+    ?INVALIDCATCH(
+       question,
        begin
            {raw_questions, RawQuestions} = unparse_questions(Questions),
            {raw_questions, <<RawQuestions/binary, Rest/binary>>}
@@ -124,8 +124,8 @@ unparse_questions(Questions) -> unparse_questions(Questions, <<>>).
 
 unparse_questions([], RawQuestions) -> {raw_questions, RawQuestions};
 unparse_questions([#question{qname=QName, qtype=QType, qclass=QClass}|Questions], RawQuestions) ->
-    ?ERRORCATCHING(
-       invalid_question,
+    ?INVALIDCATCH(
+       question,
        begin
            {raw_qname, RawQName} = unparse_domain(QName),
            {raw_qtype, RawQType} = unparse_qtype(QType),
@@ -149,8 +149,8 @@ parse_resource_records(0, Body, RRs) ->
 parse_resource_records(Count, Body, RRs) ->
     %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, Count, Body, RRs]),
     %% Parse the domain part and match all the other fields.
-    ?ERRORCATCHING(
-       invalid_raw_resource_record,
+    ?INVALIDCATCH(
+       raw_resource_record,
        begin
            {domain,
             Name,
@@ -168,8 +168,8 @@ parse_resource_records(Count, Body, RRs) ->
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_resource_record({resource_records, RRs, Rest}) ->
-    ?ERRORCATCHING(
-       invalid_resource_record,
+    ?INVALIDCATCH(
+       resource_record,
         begin
             {raw_resource_records, RawRRs} = unparse_resource_record(RRs),
             {raw_resource_records, <<RawRRs/binary, Rest/binary>>}
@@ -178,8 +178,8 @@ unparse_resource_record(RRs) -> unparse_resource_record(<<>>, RRs).
 
 unparse_resource_record(RawRRs, []) -> RawRRs;
 unparse_resource_record(RawRRs, [#resource_record{name=Name, type=Type, class=Class, ttl=TTL, rdata=RData}|RRs]) ->
-    ?ERRORCATCHING(
-       invalid_resource_record,
+    ?INVALIDCATCH(
+       resource_record,
        begin
            {raw_domain, RawName} = unparse_domain(Name),
            {raw_type, RawType} = unparse_type(Type),
@@ -203,8 +203,8 @@ parse_rdata(ns,    _RawRData) -> {error, [not_implemented_yet]};
 parse_rdata(md,    _RawRData) -> {error, [not_implemented_yet]};
 parse_rdata(mf,    _RawRData) -> {error, [not_implemented_yet]};
 parse_rdata(cname, RawRData) ->
-    ?ERRORCATCHING(
-       invalid_raw_rdata,
+    ?INVALIDCATCH(
+       raw_rdata,
        begin
            {domain, Domain, _Rest} = parse_domain(RawRData),
            {rdata, Domain}
@@ -220,7 +220,7 @@ parse_rdata(hinfo, _RawRData) -> {error, [not_implemented_yet]};
 parse_rdata(minfo, _RawRData) -> {error, [not_implemented_yet]};
 parse_rdata(mx,    _RawRData) -> {error, [not_implemented_yet]};
 parse_rdata(_Type, _RawRData) ->
-    {error, invalid_raw_rdata}.
+    {invalid, [raw_rdata]}.
 
 %% @doc Unparse RDATA, the data of a resource record.
 %% @private Internal helper function.
@@ -230,8 +230,8 @@ unparse_rdata(ns,    _RData) -> {error, [not_implemented_yet]};
 unparse_rdata(md,    _RData) -> {error, [not_implemented_yet]};
 unparse_rdata(mf,    _RData) -> {error, [not_implemented_yet]};
 unparse_rdata(cname, RData) ->
-    ?ERRORCATCHING(
-       invalid_raw_rdata,
+    ?INVALIDCATCH(
+       raw_rdata,
        begin
            {raw_domain, RawDomain, _Rest} = unparse_domain(RData),
            {rdata, RawDomain}
@@ -247,7 +247,7 @@ unparse_rdata(hinfo, _RData) -> {error, [not_implemented_yet]};
 unparse_rdata(minfo, _RData) -> {error, [not_implemented_yet]};
 unparse_rdata(mx,    _RData) -> {error, [not_implemented_yet]};
 unparse_rdata(_Type, _RData) ->
-    {error, [invalid_rdata]}.
+    {invalid, [rdata]}.
 
 %% @doc Parse a DNS domain.
 %% @private Internal helper function.
@@ -258,7 +258,7 @@ parse_domain(Labels, <<Length:8, Label:Length/binary-unit:8, Rest/binary>>) when
 parse_domain(Labels, <<Length:8, Rest/binary>>) when Length == 0 ->
     {domain, lists:reverse(Labels), Rest};
 parse_domain(_Labels, _Body) ->
-    {error, invalid}.
+    {invalid, [domain]}.
 
 %% @doc Unparse a DNS domain.
 %% @private Internal helper function.
@@ -293,7 +293,7 @@ parse_type(<<13:16>>) -> {type, hinfo};
 parse_type(<<14:16>>) -> {type, minfo};
 parse_type(<<15:16>>) -> {type, mx};
 parse_type(<<16:16>>) -> {type, txt};
-parse_type(_) ->         {error, [invalid_raw_type]}.
+parse_type(_) ->         {invalid, [raw_type]}.
 
 %% @doc Unparse a DNS type.
 %% @private Internal helper function.
@@ -314,7 +314,7 @@ unparse_type(hinfo) -> {raw_type, <<13:16>>};
 unparse_type(minfo) -> {raw_type, <<14:16>>};
 unparse_type(mx) ->    {raw_type, <<15:16>>};
 unparse_type(txt) ->   {raw_type, <<16:16>>};
-unparse_type(_) ->     {error, [invalid_type]}.
+unparse_type(_) ->     {invalid, [type]}.
 
 %% @doc Turn a numeric DNS qtype into an atom.
 %% @private Internal helper function.
@@ -326,7 +326,7 @@ parse_qtype(<<255:16>>) -> {qtype, all};
 parse_qtype(RawQType) ->
     case parse_type(RawQType) of
         {type, QType} -> {qtype, QType};
-        {error, [invalid_raw_type]} -> {error, [invalid_raw_qtype]}
+        {invalid, [raw_type]} -> {invalid, [raw_qtype]}
     end.
 
 %% @doc Unparse a DNS qtype.
@@ -339,7 +339,7 @@ unparse_qtype(all) ->   {raw_qtype, <<255:16>>};
 unparse_qtype(QType) ->
     case unparse_type(QType) of
         {raw_type, RawQType} -> {raw_qtype, RawQType};
-        {error, [invalid_type]} -> {error, [invalid_qtype]}
+        {invalid, [type]} -> {invalid, [qtype]}
     end.
 
 %% @doc Turn a numeric DNS class into an atom.
@@ -349,7 +349,7 @@ parse_class(<<1:16>>) -> {class, in};
 parse_class(<<2:16>>) -> {class, cs};
 parse_class(<<3:16>>) -> {class, ch};
 parse_class(<<4:16>>) -> {class, hs};
-parse_class(_) ->        {error, [invalid_raw_class]}.
+parse_class(_) ->        {invalid, [raw_class]}.
 
 %% @doc Unparse a DNS class.
 %% @private Internal helper function.
@@ -358,7 +358,7 @@ unparse_class(in) -> {raw_class, <<1:16>>};
 unparse_class(cs) -> {raw_class, <<2:16>>};
 unparse_class(ch) -> {raw_class, <<3:16>>};
 unparse_class(hs) -> {raw_class, <<4:16>>};
-unparse_class(_)  -> {error, [invalid_class]}.
+unparse_class(_)  -> {invalid, [class]}.
 
 %% @doc Turn a numeric DNS qclass into an atom.
 %% @private Internal helper function.
@@ -367,7 +367,7 @@ parse_qclass(<<255:16>>) -> {qclass, any};
 parse_qclass(RawClass) ->
     case parse_class(RawClass) of
         {class, Class} -> {qclass, Class};
-        {error, [invalid_raw_class]} -> {error, [invalid_raw_qclass]}
+        {invalid, [raw_class]} -> {invalid, [raw_qclass]}
     end.
 
 %% @doc Unparse a DNS qclass.
@@ -377,7 +377,7 @@ unparse_qclass(any) -> {raw_qclass, <<255:16>>};
 unparse_qclass(Class) ->
     case unparse_class(Class) of
         {raw_class, RawClass} -> {raw_qclass, RawClass};
-        {error, [invalid_class]} -> {error, [invalid_qclass]}
+        {invalid, [class]} -> {invalid, [qclass]}
     end.
 
 %% @doc Parse a DNS qr.
@@ -385,14 +385,14 @@ unparse_qclass(Class) ->
 %% @since 0.2.0
 parse_qr(0) -> {qr, query_};
 parse_qr(1) -> {qr, response};
-parse_qr(_) -> {error, [invalid_raw_qr]}.
+parse_qr(_) -> {invalid, [raw_qr]}.
 
 %% @doc Parse a DNS qr.
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_qr(query_)   -> {raw_qr, 0};
 unparse_qr(response) -> {raw_qr, 1};
-unparse_qr(_) ->        {error, [invalid_qr]}.
+unparse_qr(_) ->        {invalid, [qr]}.
 
 %% @doc Parse an opcode.
 %% @private Internal helper function.
@@ -400,7 +400,7 @@ unparse_qr(_) ->        {error, [invalid_qr]}.
 parse_opcode(0) -> {opcode, query_};
 parse_opcode(1) -> {opcode, iquery};
 parse_opcode(2) -> {opcode, status};
-parse_opcode(_) -> {error, [invalid_raw_opcode]}.
+parse_opcode(_) -> {invalid, [raw_opcode]}.
 
 %% @doc Unpparse an opcode.
 %% @private Internal helper function.
@@ -408,7 +408,7 @@ parse_opcode(_) -> {error, [invalid_raw_opcode]}.
 unparse_opcode(query_) -> {raw_opcode, 0};
 unparse_opcode(iquery) -> {raw_opcode, 1};
 unparse_opcode(status) -> {raw_opcode, 2};
-unparse_opcode(_) ->      {error, [invalid_opcode]}.
+unparse_opcode(_) ->      {invalid, [opcode]}.
 
 %% @doc Parse DNS RCodes.
 %% @private Internal helper function.
@@ -419,7 +419,7 @@ parse_rcode(2) -> {rcode, server_failure};
 parse_rcode(3) -> {rcode, name_error};
 parse_rcode(4) -> {rcode, not_implemented};
 parse_rcode(5) -> {rcode, refused};
-parse_rcode(_) -> {error, [invalid_raw_rcode]}.
+parse_rcode(_) -> {invalid, [raw_rcode]}.
 
 %% @doc Unparse DNS RCodes.
 %% @private Internal helper function.
@@ -430,27 +430,27 @@ unparse_rcode(server_failure) ->  {raw_rcode, 2};
 unparse_rcode(name_error) ->      {raw_rcode, 3};
 unparse_rcode(not_implemented) -> {raw_rcode, 4};
 unparse_rcode(refused) ->         {raw_rcode, 5};
-unparse_rcode(_) ->               {error, [invalid_rcode]}.
+unparse_rcode(_) ->               {invalid, [rcode]}.
 
 %% @doc Parse boolean values.
 %% @private Internal helper function.
 %% @since 0.2.0
 parse_bool(0) -> {bool, false};
 parse_bool(1) -> {bool, true};
-parse_bool(_) -> {error, [invalid_raw_bool]}.
+parse_bool(_) -> {invalid, [raw_bool]}.
 
 %% @doc Unparse boolean values.
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_bool(false) -> {raw_bool, 0};
 unparse_bool(true) ->  {raw_bool, 1};
-unparse_bool(_) ->     {error, [invalid_bool]}.
+unparse_bool(_) ->     {invalid, [bool]}.
 
 %% @doc true if the argument is an error, non-true otherwise (false).
 %% @private Internal helper function.
 %% @since 0.2.0
-is_error({error, _}) -> true;
-is_error(_) ->          false.
+is_invalid({invalid, _}) -> true;
+is_invalid(_) ->          false.
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%% Testing %%%%%%%%%%%%%%%%%%%%%%
@@ -586,7 +586,7 @@ questions_parsing_tests([{Type, Count, Parsed, Raw}|Questions]) ->
 %%                 correct ->
 %%                     ?_assert(ParsedToTest == CParsed);
 %%                 error ->
-%%                     ?_assert((is_error(ParsedToTest)) or % We should get an error
+%%                     ?_assert((is_invalid(ParsedToTest)) or % We should get an error
 %%                              (ParsedToTest /= CParsed))  % or plain wrong data (not an exception).
 %%             end} | questions_parsing_tests(Questions)].
 
@@ -606,7 +606,7 @@ questions_unparsing_tests([{Type, _Count, Parsed, Raw}|Questions]) ->
                 correct ->
                     ?_assert(RawToTest == CRaw);
                 error   ->
-                    ?_assert((is_error(RawToTest)) or % We should get an error
+                    ?_assert((is_invalid(RawToTest)) or % We should get an error
                              (RawToTest /= CRaw))     % or plain wrong data (not an exception).
             end} | questions_unparsing_tests(Questions)].
 
@@ -721,7 +721,7 @@ domain_parsing_tests([{Type, Parsed, Raw}|Domains]) ->
                 correct ->
                     ?_assert(ParsedToTest == CParsed);
                 error   ->
-                    ?_assert((is_error(ParsedToTest)) or % We should get an error
+                    ?_assert((is_invalid(ParsedToTest)) or % We should get an error
                              (ParsedToTest /= CParsed))  % or plain wrong data (not an exception).
             end} | domain_parsing_tests(Domains)].
 
@@ -741,7 +741,7 @@ domain_unparsing_tests([{Type, Parsed, Raw}|Domains]) ->
                 correct ->
                     ?_assert(RawToTest == CRaw);
                 error   ->
-                    ?_assert((is_error(RawToTest)) or % We should get an error
+                    ?_assert((is_invalid(RawToTest)) or % We should get an error
                              (RawToTest /= CRaw))     % or plain wrong data (not an exception).
             end} | domain_unparsing_tests(Domains)].
 
@@ -797,7 +797,7 @@ type_parsing_tests([{Type, Parsed, Raw}|Types]) ->
              io_lib:format("~nType: ~p~nCParsed: ~p~nRaw: ~p~nParsedToTest: ~p~n", [Type, CParsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                    % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == CParsed);
-                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(ParsedToTest)) % We should get an error.
             end} | type_parsing_tests(Types)].
 
 type_unparsing_test_() -> type_unparsing_tests(?TYPES).
@@ -809,7 +809,7 @@ type_unparsing_tests([{Type, Parsed, Raw}|Types]) ->
              io_lib:format("~nType: ~p~nParsed: ~p~nCRaw: ~p~nRawToTest: ~p~n", [Type, Parsed, CRaw, RawToTest])),
     [{Desc, case Type of                                 % What kind of test is it ?
                 correct -> ?_assert(RawToTest == CRaw);
-                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(RawToTest)) % We should get an error.
             end} | type_unparsing_tests(Types)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -824,7 +824,7 @@ qtype_parsing_tests([{Type, Parsed, Raw}|QTypes]) ->
              io_lib:format("~nType: ~p~nCParsed: ~p~nRaw: ~p~nParsedToTest: ~p~n", [Type, CParsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                    % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == CParsed);
-                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(ParsedToTest)) % We should get an error.
             end} | qtype_parsing_tests(QTypes)].
 
 qtype_unparsing_test_() -> qtype_unparsing_tests(?QTYPES).
@@ -836,7 +836,7 @@ qtype_unparsing_tests([{Type, Parsed, Raw}|QTypes]) ->
              io_lib:format("~nType: ~p~nParsed: ~p~nCRaw: ~p~nRawToTest: ~p~n", [Type, Parsed, CRaw, RawToTest])),
     [{Desc, case Type of                                 % What kind of test is it ?
                 correct -> ?_assert(RawToTest == CRaw);
-                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(RawToTest)) % We should get an error.
             end} | qtype_unparsing_tests(QTypes)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -851,7 +851,7 @@ class_parsing_tests([{Type, Parsed, Raw}|Classes]) ->
              io_lib:format("~nType: ~p~nCParsed: ~p~nRaw: ~p~nParsedToTest: ~p~n", [Type, CParsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                    % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == CParsed);
-                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(ParsedToTest)) % We should get an error.
             end} | class_parsing_tests(Classes)].
 
 class_unparsing_test_() -> class_unparsing_tests(?CLASSES).
@@ -863,7 +863,7 @@ class_unparsing_tests([{Type, Parsed, Raw}|Classes]) ->
              io_lib:format("~nType: ~p~nParsed: ~p~nCRaw: ~p~nRawToTest: ~p~n", [Type, Parsed, CRaw, RawToTest])),
     [{Desc, case Type of                                 % What kind of test is it ?
                 correct -> ?_assert(RawToTest == CRaw);
-                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(RawToTest)) % We should get an error.
             end} | class_unparsing_tests(Classes)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -878,7 +878,7 @@ qclass_parsing_tests([{Type, Parsed, Raw}|QClasses]) ->
              io_lib:format("~nType: ~p~nCParsed: ~p~nRaw: ~p~nParsedToTest: ~p~n", [Type, CParsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                    % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == CParsed);
-                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(ParsedToTest)) % We should get an error.
             end} | qclass_parsing_tests(QClasses)].
 
 qclass_unparsing_test_() -> qclass_unparsing_tests(?QCLASSES).
@@ -890,7 +890,7 @@ qclass_unparsing_tests([{Type, Parsed, Raw}|QClasses]) ->
              io_lib:format("~nType: ~p~nParsed: ~p~nCRaw: ~p~nRawToTest: ~p~n", [Type, Parsed, CRaw, RawToTest])),
     [{Desc, case Type of                                 % What kind of test is it ?
                 correct -> ?_assert(RawToTest == CRaw);
-                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(RawToTest)) % We should get an error.
             end} | qclass_unparsing_tests(QClasses)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -905,7 +905,7 @@ qr_parsing_tests([{Type, Parsed, Raw}|Qrs]) ->
              io_lib:format("~nType: ~p~nCParsed: ~p~nRaw: ~p~nParsedToTest: ~p~n", [Type, CParsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                    % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == CParsed);
-                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(ParsedToTest)) % We should get an error.
             end} | qr_parsing_tests(Qrs)].
 
 qr_unparsing_test_() -> qr_unparsing_tests(?QRS).
@@ -917,7 +917,7 @@ qr_unparsing_tests([{Type, Parsed, Raw}|Qrs]) ->
              io_lib:format("~nType: ~p~nParsed: ~p~nCRaw: ~p~nRawToTest: ~p~n", [Type, Parsed, CRaw, RawToTest])),
     [{Desc, case Type of                                 % What kind of test is it ?
                 correct -> ?_assert(RawToTest == CRaw);
-                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(RawToTest)) % We should get an error.
             end} | qr_unparsing_tests(Qrs)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -932,7 +932,7 @@ opcode_parsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
              io_lib:format("~nType: ~p~nCParsed: ~p~nRaw: ~p~nParsedToTest: ~p~n", [Type, CParsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                    % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == CParsed);
-                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(ParsedToTest)) % We should get an error.
             end} | opcode_parsing_tests(OpCodes)].
 
 opcode_unparsing_test_() -> opcode_unparsing_tests(?OPCODES).
@@ -944,7 +944,7 @@ opcode_unparsing_tests([{Type, Parsed, Raw}|OpCodes]) ->
              io_lib:format("~nType: ~p~nParsed: ~p~nCRaw: ~p~nRawToTest: ~p~n", [Type, Parsed, CRaw, RawToTest])),
     [{Desc, case Type of                                 % What kind of test is it ?
                 correct -> ?_assert(RawToTest == CRaw);
-                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(RawToTest)) % We should get an error.
             end} | opcode_unparsing_tests(OpCodes)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -959,7 +959,7 @@ rcode_parsing_tests([{Type, Parsed, Raw}|RCodes]) ->
              io_lib:format("~nType: ~p~nCParsed: ~p~nRaw: ~p~nParsedToTest: ~p~n", [Type, CParsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                    % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == CParsed);
-                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(ParsedToTest)) % We should get an error.
             end} | rcode_parsing_tests(RCodes)].
 
 rcode_unparsing_test_() -> rcode_unparsing_tests(?RCODES).
@@ -971,7 +971,7 @@ rcode_unparsing_tests([{Type, Parsed, Raw}|RCodes]) ->
              io_lib:format("~nType: ~p~nParsed: ~p~nCRaw: ~p~nRawToTest: ~p~n", [Type, Parsed, CRaw, RawToTest])),
     [{Desc, case Type of                                 % What kind of test is it ?
                 correct -> ?_assert(RawToTest == CRaw);
-                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(RawToTest)) % We should get an error.
             end} | rcode_unparsing_tests(RCodes)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -986,7 +986,7 @@ bool_parsing_tests([{Type, Parsed, Raw}|Bools]) ->
              io_lib:format("~nType: ~p~nCParsed: ~p~nRaw: ~p~nParsedToTest: ~p~n", [Type, CParsed, Raw, ParsedToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(ParsedToTest == CParsed);
-                error   -> ?_assert(is_error(ParsedToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(ParsedToTest)) % We should get an error.
             end} | bool_parsing_tests(Bools)].
 
 bool_unparsing_test_() -> bool_unparsing_tests(?BOOLEANS).
@@ -998,7 +998,7 @@ bool_unparsing_tests([{Type, Parsed, Raw}|Bools]) ->
              io_lib:format("~nType: ~p~nParsed: ~p~nCRaw: ~p~nRawToTest: ~p~n", [Type, Parsed, CRaw, RawToTest])),
     [{Desc, case Type of                                                % What kind of test is it ?
                 correct -> ?_assert(RawToTest == CRaw);
-                error   -> ?_assert(is_error(RawToTest)) % We should get an error.
+                error   -> ?_assert(is_invalid(RawToTest)) % We should get an error.
             end} | bool_unparsing_tests(Bools)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
