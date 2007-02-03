@@ -75,7 +75,6 @@ parse_message(RawMsg) ->
            %% Separate header (in each of it fields) and body.
            <<ID:16, QR:1, OpCode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
 
-           %% TODO: catch or something the return of {error, invalid} to return {error, invalid} from any of the parsing functions.
            %% Parse the questions and each of the other resource record sections.
            {questions, Questions, Rest} = parse_questions(QDCOUNT, Body),
            {resource_records, Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
@@ -199,10 +198,10 @@ unparse_resource_record(RawRRs, [#resource_record{name=Name, type=Type, class=Cl
 %% @doc Parse RDATA, the data of a resource record.
 %% @private Internal helper function.
 %% @since 0.2.0
-parse_rdata(a,     _RawRData) -> unspecified;
-parse_rdata(ns,    _RawRData) -> unspecified;
-parse_rdata(md,    _RawRData) -> unspecified;
-parse_rdata(mf,    _RawRData) -> unspecified;
+parse_rdata(a,     _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(ns,    _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(md,    _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(mf,    _RawRData) -> {error, [not_implemented_yet]};
 parse_rdata(cname, RawRData) ->
     ?ERRORCATCHING(
        invalid_raw_rdata,
@@ -210,41 +209,45 @@ parse_rdata(cname, RawRData) ->
            {domain, Domain, _Rest} = parse_domain(RawRData),
            {rdata, Domain}
        end);
-parse_rdata(soa,   _RawRData) -> unspecified;
-parse_rdata(mb,    _RawRData) -> unspecified;
-parse_rdata(mg,    _RawRData) -> unspecified;
-parse_rdata(mr,    _RawRData) -> unspecified;
-parse_rdata(null,  _RawRData) -> unspecified;
-parse_rdata(wks,   _RawRData) -> unspecified;
-parse_rdata(ptr,   _RawRData) -> unspecified;
-parse_rdata(hinfo, _RawRData) -> unspecified;
-parse_rdata(minfo, _RawRData) -> unspecified;
-parse_rdata(mx,    _RawRData) -> unspecified;
+parse_rdata(soa,   _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(mb,    _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(mg,    _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(mr,    _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(null,  _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(wks,   _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(ptr,   _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(hinfo, _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(minfo, _RawRData) -> {error, [not_implemented_yet]};
+parse_rdata(mx,    _RawRData) -> {error, [not_implemented_yet]};
 parse_rdata(_Type, _RawRData) ->
-    {error, invalid}.
+    {error, invalid_raw_rdata}.
 
 %% @doc Unparse RDATA, the data of a resource record.
 %% @private Internal helper function.
 %% @since 0.2.0
-unparse_rdata(a,     _RawRData) -> <<>>;
-unparse_rdata(ns,    _RawRData) -> <<>>;
-unparse_rdata(md,    _RawRData) -> <<>>;
-unparse_rdata(mf,    _RawRData) -> <<>>;
-unparse_rdata(cname, RawRData) ->
-    {raw_domain, RawDomain, _Rest} = unparse_domain(RawRData),
-    {rdata, RawDomain};
-unparse_rdata(soa,   _RawRData) -> <<>>;
-unparse_rdata(mb,    _RawRData) -> <<>>;
-unparse_rdata(mg,    _RawRData) -> <<>>;
-unparse_rdata(mr,    _RawRData) -> <<>>;
-unparse_rdata(null,  _RawRData) -> <<>>;
-unparse_rdata(wks,   _RawRData) -> <<>>;
-unparse_rdata(ptr,   _RawRData) -> <<>>;
-unparse_rdata(hinfo, _RawRData) -> <<>>;
-unparse_rdata(minfo, _RawRData) -> <<>>;
-unparse_rdata(mx,    _RawRData) -> <<>>;
-unparse_rdata(_Type, _RawRData) -> 
-    {error, invalid}.
+unparse_rdata(a,     _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(ns,    _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(md,    _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(mf,    _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(cname, RData) ->
+    ?ERRORCATCHING(
+       invalid_raw_rdata,
+       begin
+           {raw_domain, RawDomain, _Rest} = unparse_domain(RData),
+           {rdata, RawDomain}
+       end);
+unparse_rdata(soa,   _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(mb,    _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(mg,    _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(mr,    _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(null,  _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(wks,   _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(ptr,   _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(hinfo, _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(minfo, _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(mx,    _RData) -> {error, [not_implemented_yet]};
+unparse_rdata(_Type, _RData) ->
+    {error, [invalid_rdata]}.
 
 %% @doc Parse a DNS domain.
 %% @private Internal helper function.
@@ -290,7 +293,7 @@ parse_type(<<13:16>>) -> {type, hinfo};
 parse_type(<<14:16>>) -> {type, minfo};
 parse_type(<<15:16>>) -> {type, mx};
 parse_type(<<16:16>>) -> {type, txt};
-parse_type(_) ->         {error, invalid}.
+parse_type(_) ->         {error, [invalid_raw_type]}.
 
 %% @doc Unparse a DNS type.
 %% @private Internal helper function.
@@ -311,7 +314,7 @@ unparse_type(hinfo) -> {raw_type, <<13:16>>};
 unparse_type(minfo) -> {raw_type, <<14:16>>};
 unparse_type(mx) ->    {raw_type, <<15:16>>};
 unparse_type(txt) ->   {raw_type, <<16:16>>};
-unparse_type(_) ->     {error, invalid}.
+unparse_type(_) ->     {error, [invalid_type]}.
 
 %% @doc Turn a numeric DNS qtype into an atom.
 %% @private Internal helper function.
@@ -323,7 +326,7 @@ parse_qtype(<<255:16>>) -> {qtype, all};
 parse_qtype(RawQType) ->
     case parse_type(RawQType) of
         {type, QType} -> {qtype, QType};
-        {error, Reason} -> {error, Reason}
+        {error, [invalid_raw_type]} -> {error, [invalid_raw_qtype]}
     end.
 
 %% @doc Unparse a DNS qtype.
@@ -336,7 +339,7 @@ unparse_qtype(all) ->   {raw_qtype, <<255:16>>};
 unparse_qtype(QType) ->
     case unparse_type(QType) of
         {raw_type, RawQType} -> {raw_qtype, RawQType};
-        {error, Reason} -> {error, Reason}
+        {error, [invalid_type]} -> {error, [invalid_qtype]}
     end.
 
 %% @doc Turn a numeric DNS class into an atom.
@@ -346,7 +349,7 @@ parse_class(<<1:16>>) -> {class, in};
 parse_class(<<2:16>>) -> {class, cs};
 parse_class(<<3:16>>) -> {class, ch};
 parse_class(<<4:16>>) -> {class, hs};
-parse_class(_) ->        {error, invalid}.
+parse_class(_) ->        {error, [invalid_raw_class]}.
 
 %% @doc Unparse a DNS class.
 %% @private Internal helper function.
@@ -355,7 +358,7 @@ unparse_class(in) -> {raw_class, <<1:16>>};
 unparse_class(cs) -> {raw_class, <<2:16>>};
 unparse_class(ch) -> {raw_class, <<3:16>>};
 unparse_class(hs) -> {raw_class, <<4:16>>};
-unparse_class(_)  -> {error, invalid}.
+unparse_class(_)  -> {error, [invalid_class]}.
 
 %% @doc Turn a numeric DNS qclass into an atom.
 %% @private Internal helper function.
@@ -364,7 +367,7 @@ parse_qclass(<<255:16>>) -> {qclass, any};
 parse_qclass(RawClass) ->
     case parse_class(RawClass) of
         {class, Class} -> {qclass, Class};
-        {error, Reason} -> {error, Reason}
+        {error, [invalid_raw_class]} -> {error, [invalid_raw_qclass]}
     end.
 
 %% @doc Unparse a DNS qclass.
@@ -374,7 +377,7 @@ unparse_qclass(any) -> {raw_qclass, <<255:16>>};
 unparse_qclass(Class) ->
     case unparse_class(Class) of
         {raw_class, RawClass} -> {raw_qclass, RawClass};
-        {error, Reason} -> {error, Reason}
+        {error, [invalid_class]} -> {error, [invalid_qclass]}
     end.
 
 %% @doc Parse a DNS qr.
@@ -382,14 +385,14 @@ unparse_qclass(Class) ->
 %% @since 0.2.0
 parse_qr(0) -> {qr, query_};
 parse_qr(1) -> {qr, response};
-parse_qr(_) -> {error, invalid}.
+parse_qr(_) -> {error, [invalid_raw_qr]}.
 
 %% @doc Parse a DNS qr.
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_qr(query_)   -> {raw_qr, 0};
 unparse_qr(response) -> {raw_qr, 1};
-unparse_qr(_) ->        {error, invalid}.
+unparse_qr(_) ->        {error, [invalid_qr]}.
 
 %% @doc Parse an opcode.
 %% @private Internal helper function.
@@ -397,7 +400,7 @@ unparse_qr(_) ->        {error, invalid}.
 parse_opcode(0) -> {opcode, query_};
 parse_opcode(1) -> {opcode, iquery};
 parse_opcode(2) -> {opcode, status};
-parse_opcode(_) -> {error, invalid}.
+parse_opcode(_) -> {error, [invalid_raw_opcode]}.
 
 %% @doc Unpparse an opcode.
 %% @private Internal helper function.
@@ -405,7 +408,7 @@ parse_opcode(_) -> {error, invalid}.
 unparse_opcode(query_) -> {raw_opcode, 0};
 unparse_opcode(iquery) -> {raw_opcode, 1};
 unparse_opcode(status) -> {raw_opcode, 2};
-unparse_opcode(_) ->      {error, invalid}.
+unparse_opcode(_) ->      {error, [invalid_opcode]}.
 
 %% @doc Parse DNS RCodes.
 %% @private Internal helper function.
@@ -416,7 +419,7 @@ parse_rcode(2) -> {rcode, server_failure};
 parse_rcode(3) -> {rcode, name_error};
 parse_rcode(4) -> {rcode, not_implemented};
 parse_rcode(5) -> {rcode, refused};
-parse_rcode(_) -> {error, invalid}.
+parse_rcode(_) -> {error, [invalid_raw_rcode]}.
 
 %% @doc Unparse DNS RCodes.
 %% @private Internal helper function.
@@ -427,21 +430,21 @@ unparse_rcode(server_failure) ->  {raw_rcode, 2};
 unparse_rcode(name_error) ->      {raw_rcode, 3};
 unparse_rcode(not_implemented) -> {raw_rcode, 4};
 unparse_rcode(refused) ->         {raw_rcode, 5};
-unparse_rcode(_) ->               {error, invalid}.
+unparse_rcode(_) ->               {error, [invalid_rcode]}.
 
 %% @doc Parse boolean values.
 %% @private Internal helper function.
 %% @since 0.2.0
 parse_bool(0) -> {bool, false};
 parse_bool(1) -> {bool, true};
-parse_bool(_) -> {error, invalid}.
+parse_bool(_) -> {error, [invalid_raw_bool]}.
 
 %% @doc Unparse boolean values.
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_bool(false) -> {raw_bool, 0};
 unparse_bool(true) ->  {raw_bool, 1};
-unparse_bool(_) ->     {error, invalid}.
+unparse_bool(_) ->     {error, [invalid_bool]}.
 
 %% @doc true if the argument is an error, non-true otherwise (false).
 %% @private Internal helper function.
