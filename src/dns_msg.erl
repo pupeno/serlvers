@@ -69,22 +69,25 @@
 %% @since 0.2.0
 parse_message(RawMsg) ->
     %%io:fwrite("~w:parse_message(~w)~n", [?MODULE, RawMsg]),
+    ?ERRORCATCHING(
+       invalid_raw_message,
+       begin
+           %% Separate header (in each of it fields) and body.
+           <<ID:16, QR:1, OpCode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
 
-    %% Separate header (in each of it fields) and body.
-    <<ID:16, QR:1, OpCode:4, AA:1, TC:1, RD:1, RA:1, _Z:3, RCODE:4, QDCOUNT:16, ANCOUNT:16, NSCOUNT:16, ARCOUNT:16, Body/binary>> = RawMsg,
-
-    %% TODO: catch or something the return of {error, invalid} to return {error, invalid} from any of the parsing functions.
-    %% Parse the questions and each of the other resource record sections.
-    {questions, Questions, Rest} = parse_questions(QDCOUNT, Body),
-    {resource_records, Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
-    {resource_records, Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
-    {resource_records, Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
-
-    %% Build the messag.
-    #dns_message{id = ID, qr = parse_qr(QR), opcode = parse_opcode(OpCode),
-                 aa = parse_bool(AA), tc = parse_bool(TC), rd = parse_bool(RD),
-                 ra = parse_bool(RA), rcode = parse_rcode(RCODE), question = Questions,
-                 answer = Answer, authority = Authority, additional = Additional}.
+           %% TODO: catch or something the return of {error, invalid} to return {error, invalid} from any of the parsing functions.
+           %% Parse the questions and each of the other resource record sections.
+           {questions, Questions, Rest} = parse_questions(QDCOUNT, Body),
+           {resource_records, Answer, Rest2} = parse_resource_records(ANCOUNT, Rest),
+           {resource_records, Authority, Rest3} = parse_resource_records(NSCOUNT, Rest2),
+           {resource_records, Additional, _Rest4} = parse_resource_records(ARCOUNT, Rest3),
+           
+           %% Build the messag.
+           #dns_message{id = ID, qr = parse_qr(QR), opcode = parse_opcode(OpCode),
+                        aa = parse_bool(AA), tc = parse_bool(TC), rd = parse_bool(RD),
+                        ra = parse_bool(RA), rcode = parse_rcode(RCODE), question = Questions,
+                        answer = Answer, authority = Authority, additional = Additional}
+       end).
 
 
 %% @doc Parse the query section of a DNS message.
@@ -112,12 +115,16 @@ parse_questions(Count, RawBody, Questions) ->
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_questions({questions, Questions, Rest}) ->
-    RawQuestions = unparse_questions(Questions),
-    {raw_questions, <<RawQuestions/binary, Rest/binary>>};
-unparse_questions(Questions) -> unparse_questions(<<>>, Questions).
+    ?ERRORCATCHING(
+       invalid_question,
+       begin
+           {raw_questions, RawQuestions} = unparse_questions(Questions),
+           {raw_questions, <<RawQuestions/binary, Rest/binary>>}
+       end);
+unparse_questions(Questions) -> unparse_questions(Questions, <<>>).
 
-unparse_questions(RawQuestions, []) -> RawQuestions;
-unparse_questions(RawQuestions, [#question{qname=QName, qtype=QType, qclass=QClass}|Questions]) ->
+unparse_questions([], RawQuestions) -> {raw_questions, RawQuestions};
+unparse_questions([#question{qname=QName, qtype=QType, qclass=QClass}|Questions], RawQuestions) ->
     ?ERRORCATCHING(
        invalid_question,
        begin
