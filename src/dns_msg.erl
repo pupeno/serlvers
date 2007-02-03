@@ -22,6 +22,16 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-define(ERRORCATCHING(NAME, BODY),
+        try BODY
+        catch
+            error:{badmatch, Value} ->
+                case Value of
+                    {error, Reason} -> {error, [NAME|Reason]};
+                    _ -> {error, {unexpected_error, Value}}
+                end
+        end).
+
 %% @ doc Structure defining a DNS message. It is based on what is defined on RFC1035 <http://www.ietf.org/rfc/rfc1035.txt> but it has been re-arranged for easy of use and some fields than are not needed where removed (the counts, which can be calculated out of the length of the lists).
 %% @ since 0.2.0
 -record(dns_message, {
@@ -87,23 +97,16 @@ parse_questions(Count, RawBody) -> parse_questions(Count, RawBody, []).
 parse_questions(0, Rest, Questions) -> {questions, lists:reverse(Questions), Rest};
 parse_questions(Count, RawBody, Questions) ->
     %%io:fwrite("~w:parse_questions(~p, ~p, ~p)~n", [?MODULE, Count, RawBody, Questions]),
-    try
-        begin
-            %% To parse a question, first parse the domain.
-            {domain, QName, <<RawQType:2/binary-unit:8, RawQClass:2/binary-unit:8, Rest/binary>>} = parse_domain(RawBody),
-            {qtype, QType} = parse_qtype(RawQType),
-            {qclass, QClass} = parse_qclass(RawQClass),
-            Question = #question{qname = QName, qtype = QType, qclass = QClass},
-            parse_questions(Count - 1, Rest, [Question|Questions])
-        end
-    catch
-        error:{badmatch, Value} ->
-            case Value of
-                {error, Reason} -> {error, Reason};
-                _ -> {error, {unexpected_error, Value}}
-            end
-    end.
-
+    ?ERRORCATCHING(
+       invalid_raw_question,
+       begin
+           %% To parse a question, first parse the domain.
+           {domain, QName, <<RawQType:2/binary-unit:8, RawQClass:2/binary-unit:8, Rest/binary>>} = parse_domain(RawBody),
+           {qtype, QType} = parse_qtype(RawQType),
+           {qclass, QClass} = parse_qclass(RawQClass),
+           Question = #question{qname = QName, qtype = QType, qclass = QClass},
+           parse_questions(Count - 1, Rest, [Question|Questions])
+       end).
 
 %% @doc Unparse the query section of a DNS message. From records, build the binaries.
 %% @private Internal helper function.
@@ -115,23 +118,17 @@ unparse_questions(Questions) -> unparse_questions(<<>>, Questions).
 
 unparse_questions(RawQuestions, []) -> RawQuestions;
 unparse_questions(RawQuestions, [#question{qname=QName, qtype=QType, qclass=QClass}|Questions]) ->
-    try
-        begin
-            {raw_qname, RawQName} = unparse_domain(QName),
-            {raw_qtype, RawQType} = unparse_qtype(QType),
-            {raw_qclass, RawQClass} = unparse_qclass(QClass),
-            unparse_questions(<<RawQuestions/binary,
-                               RawQName/binary,
-                               RawQType/binary,
-                               RawQClass/binary>>, Questions)
-        end
-    catch
-        error:{badmatch, Value} ->
-            case Value of
-                {error, Reason} -> {error, Reason};
-                _ -> {error, {unexpected_error, Value}}
-            end
-    end.
+    ?ERRORCATCHING(
+       invalid_question,
+       begin
+           {raw_qname, RawQName} = unparse_domain(QName),
+           {raw_qtype, RawQType} = unparse_qtype(QType),
+           {raw_qclass, RawQClass} = unparse_qclass(QClass),
+           unparse_questions(<<RawQuestions/binary,
+                              RawQName/binary,
+                              RawQType/binary,
+                              RawQClass/binary>>, Questions)
+       end).
 
 %% @doc Parse the resource records.
 %% @private Internal helper function.
@@ -146,70 +143,51 @@ parse_resource_records(0, Body, RRs) ->
 parse_resource_records(Count, Body, RRs) ->
     %%io:fwrite("~w:parse_resource_records(~w, ~w, ~w)~n", [?MODULE, Count, Body, RRs]),
     %% Parse the domain part and match all the other fields.
-    try
-        begin
-            {domain,
-             Name,
-             <<RawType:16, RawClass:16, TTL:32,
-              RDLength:16, RawRData:RDLength/binary, Rest/binary>>} = parse_domain(Body),
-            {type, Type} = parse_type(RawType),
-            {class, Class} = parse_class(RawClass),
-            {rdata, RData} = parse_rdata(Type, RawRData),
-            RR = #resource_record{name = Name, type = Type, class = Class,
-                                  ttl = TTL, rdata = RData},
-            parse_resource_records(Count - 1, Rest, [RR|RRs])
-        end
-    catch
-        error:{badmatch, Value} ->
-            case Value of
-                {error, Reason} -> {error, Reason};
-                _ -> {error, {unexpected_error, Value}}
-            end
-    end.
-
+    ?ERRORCATCHING(
+       invalid_raw_resource_record,
+       begin
+           {domain,
+            Name,
+            <<RawType:16, RawClass:16, TTL:32,
+             RDLength:16, RawRData:RDLength/binary, Rest/binary>>} = parse_domain(Body),
+           {type, Type} = parse_type(RawType),
+           {class, Class} = parse_class(RawClass),
+           {rdata, RData} = parse_rdata(Type, RawRData),
+           RR = #resource_record{name = Name, type = Type, class = Class,
+                                 ttl = TTL, rdata = RData},
+           parse_resource_records(Count - 1, Rest, [RR|RRs])
+       end).
 
 %% @doc Unparse resource records.
 %% @private Internal helper function.
 %% @since 0.2.0
 unparse_resource_record({resource_records, RRs, Rest}) ->
-    try 
+    ?ERRORCATCHING(
+       invalid_resource_record,
         begin
             {raw_resource_records, RawRRs} = unparse_resource_record(RRs),
             {raw_resource_records, <<RawRRs/binary, Rest/binary>>}
-        end
-    catch
-        error:{badmatch, Value} ->
-            case Value of
-                {error, Reason} -> {error, Reason};
-                _ -> {error, {unexpected_error, Value}}
-            end
-    end;
+        end);
 unparse_resource_record(RRs) -> unparse_resource_record(<<>>, RRs).
 
 unparse_resource_record(RawRRs, []) -> RawRRs;
 unparse_resource_record(RawRRs, [#resource_record{name=Name, type=Type, class=Class, ttl=TTL, rdata=RData}|RRs]) ->
-    try
-        begin
-            {raw_domain, RawName} = unparse_domain(Name),
-            {raw_type, RawType} = unparse_type(Type),
-            {raw_class, RawClass} = unparse_class(Class),
-            {raw_rdata, RawRData} = unparse_rdata(Type, RData),
-            {raw_rdlength, RawRDLength} = length(RawRData),
-            {raw_resource_record, unparse_resource_record(<<RawRRs/binary,
-                                                           RawName/binary,
-                                                           RawType/binary,
-                                                           RawClass/binary,
-                                                           TTL:32,
-                                                           RawRDLength:16,
-                                                           RawRData/binary>>, RRs)}
-        end
-    catch
-        error:{badmatch, Value} ->
-            case Value of
-                {error, Reason} -> {error, Reason};
-                _ -> {error, {unexpected_error, Value}}
-            end
-    end.
+    ?ERRORCATCHING(
+       invalid_resource_record,
+       begin
+           {raw_domain, RawName} = unparse_domain(Name),
+           {raw_type, RawType} = unparse_type(Type),
+           {raw_class, RawClass} = unparse_class(Class),
+           {raw_rdata, RawRData} = unparse_rdata(Type, RData),
+           {raw_rdlength, RawRDLength} = length(RawRData),
+           {raw_resource_record, unparse_resource_record(<<RawRRs/binary,
+                                                          RawName/binary,
+                                                          RawType/binary,
+                                                          RawClass/binary,
+                                                          TTL:32,
+                                                          RawRDLength:16,
+                                                          RawRData/binary>>, RRs)}
+       end).
 
 %% @doc Parse RDATA, the data of a resource record.
 %% @private Internal helper function.
@@ -219,18 +197,12 @@ parse_rdata(ns,    _RawRData) -> unspecified;
 parse_rdata(md,    _RawRData) -> unspecified;
 parse_rdata(mf,    _RawRData) -> unspecified;
 parse_rdata(cname, RawRData) ->
-    try
-        begin
-            {domain, Domain, _Rest} = parse_domain(RawRData),
-            {rdata, Domain}
-        end
-    catch
-        error:{badmatch, Value} ->
-            case Value of
-                {error, Reason} -> {error, Reason};
-                _ -> {error, {unexpected_error, Value}}
-            end
-    end;
+    ?ERRORCATCHING(
+       invalid_raw_rdata,
+       begin
+           {domain, Domain, _Rest} = parse_domain(RawRData),
+           {rdata, Domain}
+       end);
 parse_rdata(soa,   _RawRData) -> unspecified;
 parse_rdata(mb,    _RawRData) -> unspecified;
 parse_rdata(mg,    _RawRData) -> unspecified;
