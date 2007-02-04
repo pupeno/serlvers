@@ -27,7 +27,10 @@
         catch
             error:{badmatch, Value} ->
                 case Value of
-                    {ivalid, Reason} -> {invalid, [NAME|Reason]};
+                    {invalid, [Reason|_] = Reasons} -> 
+                        if NAME == Reason -> {invalid, Reasons};
+                           true           -> {invalid, [NAME|Reasons]}
+                        end;
                     _ -> {error, {unexpected_error, Value}}
                 end
         end).
